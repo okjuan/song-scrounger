@@ -1,9 +1,10 @@
 import asyncio
 import os
+import sys
 
 from document_parser import find_quoted_tokens
 from spotify_client import SpotifyClient
-from util import read_file_contents
+from util import read_file_contents, get_spotify_creds, get_spotify_bearer_token
 
 
 class SongScrounger:
@@ -38,3 +39,15 @@ class SongScrounger:
 
             tracks.append(track)
         return tracks
+
+async def main(input_file, playlist_name):
+    client_id, secret_key = get_spotify_creds()
+    bearer_token = get_spotify_bearer_token()
+    song_scrounger = SongScrounger(client_id, secret_key, bearer_token=bearer_token)
+    await song_scrounger.create_playlist(input_file, playlist_name)
+
+if __name__ == "__main__":
+    if len(sys.argv) < 3:
+        print("Usage: python song_scrounger.py <path-to-input-file> <playlist-name>")
+        exit()
+    asyncio.run(main(sys.argv[1], sys.argv[2]))
