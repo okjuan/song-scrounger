@@ -1,10 +1,12 @@
 import asyncio
 import os
+import random
 from song_scrounger import SongScrounger
 
 
 async def test_create_playlist(song_scrounger):
-    playlist = await song_scrounger.create_playlist("test_inputs/test_mini.txt")
+    name = f"Song Scrounger {random.randint(0,10000)}"
+    playlist = await song_scrounger.create_playlist("test_inputs/test_mini.txt", name)
     print("Got playlist: ", playlist)
 
 async def main():

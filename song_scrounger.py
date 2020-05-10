@@ -10,13 +10,13 @@ class SongScrounger:
     def __init__(self, client_id, secret_key, bearer_token):
         self.spotify_client = SpotifyClient(client_id, secret_key, bearer_token)
 
-    async def create_playlist(self, input_filename):
+    async def create_playlist(self, input_filename, playlist_name):
         track_names = find_quoted_tokens(read_file_contents(input_filename))
         track_names = map(lambda track_name: track_name.strip(" ,"), track_names)
         tracks = await self._get_tracks(track_names)
         playlist = await self.spotify_client.create_playlist(
-            "Created by Song Scrounger",
-            tracks
+            playlist_name,
+            tracks,
         )
         return playlist
 
