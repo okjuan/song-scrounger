@@ -3,6 +3,7 @@ from spotify.http import HTTPUserClient
 from spotify import Client
 
 
+# TODO: update return types to hide package-specific models
 class SpotifyClient:
     """
     Wrapper for Spotify library of choice.
@@ -26,7 +27,7 @@ class SpotifyClient:
             ]
         return results.tracks
 
-    async def create_playlist(self, name, tracks=[]):
+    async def create_playlist(self, name):
         if self.bearer_token is None:
             raise ValueError("Cannot create playlist without Bearer Token.")
 
@@ -35,5 +36,15 @@ class SpotifyClient:
             data = await http_cli.current_user()
             user = spotify.User(spotify_client, data, http=http_cli)
             playlist = await user.create_playlist(name)
+            await http_cli.close()
+        return playlist
+
+    async def add_tracks(self, playlist, tracks):
+        async with Client(self.client_id, self.secret_key) as spotify_client:
+            http_cli = HTTPUserClient(self.client_id, self.secret_key, self.bearer_token, None)
+            data = await http_cli.current_user()
+            user = spotify.User(spotify_client, data, http=http_cli)
+            for track in tracks:
+                await user.add_tracks(playlist, track)
             await http_cli.close()
         return playlist

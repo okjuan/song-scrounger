@@ -13,6 +13,10 @@ class TestSongScrounger:
         playlist = await self.song_scrounger.create_playlist("test_inputs/test_mini.txt", name)
         print("Got playlist: ", playlist)
 
+    async def test_get_tracks(self):
+        tracks = await self.song_scrounger._get_tracks(["Redbone"])
+        print("Tracks: ", tracks)
+
 async def main():
     client_id = os.environ.get("SPOTIFY_CLIENT_ID")
     secret_key = os.environ.get("SPOTIFY_SECRET_KEY")
@@ -22,6 +26,7 @@ async def main():
 
     tests = TestSongScrounger(client_id, secret_key, bearer_token)
     await tests.test_create_playlist()
+    await tests.test_get_tracks()
 
 
 if __name__ == "__main__":

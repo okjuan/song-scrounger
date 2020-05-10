@@ -14,11 +14,8 @@ class SongScrounger:
         track_names = find_quoted_tokens(read_file_contents(input_filename))
         track_names = map(lambda track_name: track_name.strip(" ,"), track_names)
         tracks = await self._get_tracks(track_names)
-        playlist = await self.spotify_client.create_playlist(
-            playlist_name,
-            tracks,
-        )
-        return playlist
+        playlist = await self.spotify_client.create_playlist(playlist_name)
+        return await self.spotify_client.add_tracks(playlist, tracks)
 
     async def _get_tracks(self, track_names):
         tracks = []
