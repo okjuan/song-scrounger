@@ -1,5 +1,6 @@
 import asyncio
 import os
+import util
 
 from spotify_client import SpotifyClient
 
@@ -15,11 +16,7 @@ async def test_find_track_verbatim(spotify_client):
     return True
 
 async def main():
-    client_id = os.environ.get("SPOTIFY_CLIENT_ID")
-    secret_key = os.environ.get("SPOTIFY_SECRET_KEY")
-    if client_id is None or secret_key is None:
-        raise Exception("Env vars 'SPOTIFY_CLIENT_ID' and 'SPOTIFY_SECRET_KEY' must be set.")
-
+    client_id, secret_key = util.get_spotify_creds()
     client = SpotifyClient(client_id, secret_key)
 
     test_passed = await test_find_track_verbatim(client)

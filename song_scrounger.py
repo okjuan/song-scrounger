@@ -7,10 +7,16 @@ from util import read_file_contents
 
 
 class SongScrounger:
-    def __init__(self, client_id, secret_key, bearer_token):
+    def __init__(self, client_id, secret_key, bearer_token=None):
+        self.bearer_token_is_set = not bearer_token is None
         self.spotify_client = SpotifyClient(client_id, secret_key, bearer_token)
 
+    def fail_if_no_bearer_token(self, reason):
+        if not self.bearer_token_is_set:
+            raise Exception(f"bearer_token is None: {reason}.")
+
     async def create_playlist(self, input_filename, playlist_name):
+        self.fail_if_no_bearer_token("need Bearer Token to create playlist")
         track_names = find_quoted_tokens(read_file_contents(input_filename))
         track_names = map(lambda track_name: track_name.strip(" ,"), track_names)
         tracks = await self._get_tracks(track_names)

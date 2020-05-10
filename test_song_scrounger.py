@@ -1,11 +1,12 @@
 import asyncio
 import os
 import random
+import util
 from song_scrounger import SongScrounger
 
 
 class TestSongScrounger:
-    def __init__(self, client_id, secret_key, bearer_token):
+    def __init__(self, client_id, secret_key, bearer_token=None):
         self.song_scrounger = SongScrounger(client_id, secret_key, bearer_token)
 
     async def test_create_playlist(self):
@@ -18,15 +19,13 @@ class TestSongScrounger:
         print("Tracks: ", tracks)
 
 async def main():
-    client_id = os.environ.get("SPOTIFY_CLIENT_ID")
-    secret_key = os.environ.get("SPOTIFY_SECRET_KEY")
-    bearer_token = os.environ.get("SPOTIFY_BEARER_TOKEN")
-    if client_id is None or secret_key is None or bearer_token is None:
-        raise Exception("Env vars 'SPOTIFY_CLIENT_ID', 'SPOTIFY_SECRET_KEY', 'SPOTIFY_BEARER_TOKEN' must be set.")
+    client_id, secret_key = util.get_spotify_creds()
+    tests = TestSongScrounger(client_id, secret_key)
+    await tests.test_get_tracks()
 
+    bearer_token = util.get_spotify_bearer_token()
     tests = TestSongScrounger(client_id, secret_key, bearer_token)
     await tests.test_create_playlist()
-    await tests.test_get_tracks()
 
 
 if __name__ == "__main__":
