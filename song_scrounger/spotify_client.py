@@ -1,6 +1,7 @@
 import spotify
 from spotify.http import HTTPUserClient
 from spotify import Client
+from spotify.errors import SpotifyException
 
 
 # TODO: update return types to hide package-specific models
@@ -17,9 +18,12 @@ class SpotifyClient:
         if len(track_name) == 0:
             raise ValueError("Track name cannot be empty.")
 
-        # apparently only the async interface supports context management
-        async with Client(self.client_id, self.secret_key) as cli:
-            results = await cli.search(track_name, types=["track"])
+        try:
+            # apparently only the async interface supports context management
+            async with Client(self.client_id, self.secret_key) as cli:
+                results = await cli.search(track_name, types=["track"])
+        except SpotifyException as e:
+            print("Could not add tracks to playlist with error:", e)
 
         if verbatim:
             return [
@@ -31,20 +35,27 @@ class SpotifyClient:
         if self.bearer_token is None:
             raise ValueError("Cannot create playlist without Bearer Token.")
 
-        async with Client(self.client_id, self.secret_key) as spotify_client:
-            http_cli = HTTPUserClient(self.client_id, self.secret_key, self.bearer_token, None)
-            data = await http_cli.current_user()
-            user = spotify.User(spotify_client, data, http=http_cli)
-            playlist = await user.create_playlist(name)
+        try:
+            async with Client(self.client_id, self.secret_key) as spotify_client:
+                http_cli = HTTPUserClient(self.client_id, self.secret_key, self.bearer_token, None)
+                data = await http_cli.current_user()
+                user = spotify.User(spotify_client, data, http=http_cli)
+                return await user.create_playlist(name)
+        except SpotifyException as e:
+            print("Could not add tracks to playlist with error:", e)
+        finally:
             await http_cli.close()
-        return playlist
 
     async def add_tracks(self, playlist, tracks):
-        async with Client(self.client_id, self.secret_key) as spotify_client:
-            http_cli = HTTPUserClient(self.client_id, self.secret_key, self.bearer_token, None)
-            data = await http_cli.current_user()
-            user = spotify.User(spotify_client, data, http=http_cli)
-            for track in tracks:
-                await user.add_tracks(playlist, track)
+        try:
+            async with Client(self.client_id, self.secret_key) as spotify_client:
+                http_cli = HTTPUserClient(self.client_id, self.secret_key, self.bearer_token, None)
+                data = await http_cli.current_user()
+                user = spotify.User(spotify_client, data, http=http_cli)
+                for track in tracks:
+                    await user.add_tracks(playlist, track)
+        except SpotifyException as e:
+            print("Could not add tracks to playlist with error:", e)
+        finally:
             await http_cli.close()
         return playlist
