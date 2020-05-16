@@ -1,40 +1,29 @@
-import document_parser
-from util import read_file_contents
+import unittest
 
-def test_find_quoted_tokens():
-    test_cases = [
-        {
-            "input": "Should \"Find this\" and \"also this\"",
-            "expected": ['Find this', 'also this'],
-        },
-        {
-            "input": read_file_contents("test_inputs/test.txt"),
-            "expected": ['American Pie', 'the day the music died', 'La Bamba', 'Chantilly Lace', 'American Pie', 'We all got up to dance / Oh, but we never got the chance.', 'Put Your Head on My Shoulder', "Everybody's Somebody's Fool", "I'm Sorry", 'Volare', "Travelin' Man", 'Moody River', 'Take Care of My Baby', 'Venus', 'Venus', 'At the Hop', 'oooh', 'girl groups', 'Wall of Sound,', 'To Know Him is to Love Him', 'Let me be Your Teddy Bear', 'Will You Love Me Tomorrow?', "Tonight's the Night", 'Be My Baby', "He's a Rebel", "My Boyfriend's Back", 'Leader of the Pack', 'He Hit Me (and it felt like a kiss),', "Thank goodness that's over with!", 'inevitable,', "Blowin' in the Wind,", "The Times They are a-Changin'", "yeah, 'the Order is rapidly fadin'!", "Blowin' in the Wind,", "A Hard Rain's A-Gonna Fall,", 'Masters of War,', '', ' Subterranean Homesick Blues,', 'Like a Rolling Stone,', 'Bob Dylan', "Blowin' in the Wind", 'folk', 'folk rock', 'protest', 'Will You Love Me Tomorrow', 'The Conscience of a Generation', 'Yuppies', 'born again', 'We Are The World', 'We Are The World'],
-        },
-        {
-            "input": read_file_contents("test_inputs/test_mini.txt"),
-            "expected": ['American Pie'],
-        }
-    ]
-    failures = 0
-    for test in test_cases:
-        tokens = document_parser.find_quoted_tokens(test['input'])
-        if tokens != test['expected']:
-            fail_test(test['input'], test['expected'], tokens)
-            failures += 1
-    return (len(test_cases), failures)
+from song_scrounger.document_parser import find_quoted_tokens
+from song_scrounger.util import read_file_contents
 
-def fail_test(test_in, expected, result):
-    print(f"FAIL:\n\texpected: '{expected}'\n\tresult: '{result}'\n\tinput: '{test_in if len(test_in) < 15 else str(test_in[:15]) + '...'}'")
+class TestDocumentParser(unittest.TestCase):
+    def test_find_single_token(self):
+        self.assertEqual(
+            find_quoted_tokens("Should \"Find this\" at least"),
+            ["Find this"],
+            "Faild to find only token in text.",
+        )
 
-def run_tests():
-    total, failures = test_find_quoted_tokens()
-    if failures > 0:
-        print(f"FAILURES: {failures} total")
-    else:
-        print("Ok.")
-    print(f"Ran {total} test(s).")
+    def test_find_tokens(self):
+        text = """
+            When Don McClean recorded "American Pie" in 1972 he was remembering his own youth and the early innocence of rock 'n' roll fifteen years before; he may not have considered that he was also contributing the most sincere historical treatise ever fashioned on the vast social transition from the 1950s to the 1960s. For the record, "the day the music died" refers to Buddy Holly's February 1959 death in a plane crash in North Dakota that also took the lives of Richie ("La Bamba") Valens and The Big Bopper ("Chantilly Lace"). The rest of "American Pie" describes the major rock stars of the sixties and their publicity-saturated impact on the music scene: the Jester is Bob Dylan, the Sergeants are the Beatles, Satan is Mick Jagger. For 1950s teens who grew up with the phenomenon of primordial rock 'n' roll, the changes of the sixties might have seemed to turn the music into something very different: "We all got up to dance / Oh, but we never got the chance." There's no doubt that
+        """
+        self.assertEqual(
+            set(find_quoted_tokens(text)),
+            set(['American Pie', 'the day the music died', 'La Bamba', 'Chantilly Lace', 'American Pie', 'We all got up to dance / Oh, but we never got the chance.']),
+            "Failed to find all tokens.",
+        )
 
-
-if __name__ == "__main__":
-    run_tests()
+    def test_find_none(self):
+        self.assertEqual(
+            find_quoted_tokens("Nothing to see here."),
+            [],
+            "Should not have found any tokens.",
+        )

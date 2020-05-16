@@ -2,9 +2,9 @@ import asyncio
 import os
 import sys
 
-from document_parser import find_quoted_tokens
-from spotify_client import SpotifyClient
-from util import read_file_contents, get_spotify_creds, get_spotify_bearer_token
+from .document_parser import find_quoted_tokens
+from .spotify_client import SpotifyClient
+from .util import read_file_contents, get_spotify_creds, get_spotify_bearer_token
 
 
 class SongScrounger:

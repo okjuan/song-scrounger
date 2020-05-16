@@ -1,32 +1,38 @@
 import asyncio
 import os
 import random
-import util
-from song_scrounger import SongScrounger
+import unittest
+
+from song_scrounger.song_scrounger import SongScrounger
+from song_scrounger.util import get_spotify_creds, get_spotify_bearer_token
 
 
-class TestSongScrounger:
-    def __init__(self, client_id, secret_key, bearer_token=None):
-        self.song_scrounger = SongScrounger(client_id, secret_key, bearer_token)
+class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
+    @classmethod
+    def setUpClass(cls):
+        client_id, secret_key = get_spotify_creds()
+        bearer_token = get_spotify_bearer_token()
+        cls.song_scrounger = SongScrounger(client_id, secret_key, bearer_token)
+
+    @classmethod
+    def _get_path_to_test_input_file(cls, name):
+        # Relative from repo root
+        return os.path.abspath(f"tests/test_inputs/{name}")
 
     async def test_create_playlist(self):
         name = f"Song Scrounger {random.randint(0,10000)}"
-        playlist = await self.song_scrounger.create_playlist("test_inputs/test_mini.txt", name)
-        print("Got playlist: ", playlist)
+        playlist = await self.song_scrounger.create_playlist(
+            TestSongScrounger._get_path_to_test_input_file("test_mini.txt"), name)
+
+        # TODO: use spotify_client to check if new playlist exists
+        pass
 
     async def test_get_tracks(self):
-        tracks = await self.song_scrounger._get_tracks(["Redbone"])
-        print("Tracks: ", tracks)
+        song_name = "Redbone"
+        tracks = await self.song_scrounger._get_tracks([song_name])
 
-async def main():
-    client_id, secret_key = util.get_spotify_creds()
-    tests = TestSongScrounger(client_id, secret_key)
-    await tests.test_get_tracks()
-
-    bearer_token = util.get_spotify_bearer_token()
-    tests = TestSongScrounger(client_id, secret_key, bearer_token)
-    await tests.test_create_playlist()
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+        self.assertGreater(
+            len(tracks),
+            0,
+            f"Did not find any results for song '{song_name}'.",
+        )
