@@ -20,7 +20,7 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-![Spotify Playlist](./imgs/spotify_playlist_screenshot.png)
+![Spotify Playlist](https://github.com/okjuan/song-scrounger/raw/master/imgs/spotify_playlist_screenshot.png)
 
 Assuming you have:
 1. Created a file in the same directory called `input_file.txt` (see example below)
