@@ -1,5 +1,4 @@
 import asyncio
-import os
 import sys
 
 from .document_parser import find_quoted_tokens
