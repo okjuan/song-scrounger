@@ -73,7 +73,12 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(tracks), 3, "Expected exactly 3 results.")
 
     @unittest.skip("Skip integration tests by default")
-    async def test_end_to_end(self):
+    async def test_end_to_end__for_duplicate_songs(self):
+        input_file_name = "test_duplicate_songs.txt"
+        playlist_name = "Duplicate Song Test: should contain 4 songs (DELETE ME)"
+        await self._run_integration_test(input_file_name, playlist_name)
+
+    async def _run_integration_test(self, input_file_name, playlist_name):
         from song_scrounger.spotify_client import SpotifyClient
         from song_scrounger.util import get_spotify_creds, get_spotify_bearer_token
         from tests import helper
@@ -83,8 +88,7 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
         spotify_client = SpotifyClient(spotify_client_id, spotify_secret_key, spotify_bearer_token)
 
         song_scrounger = SongScrounger(spotify_client)
-        playlist_name = "(should contain 4 songs) DELETE ME: test_song_scrounger.test_end_to_end"
-        input_file_path = helper.get_path_to_test_input_file("test_song_scrounger.txt")
+        input_file_path = helper.get_path_to_test_input_file(input_file_name)
         tracks = song_scrounger.parse_tracks(input_file_path)
 
         await song_scrounger.create_playlist(playlist_name, tracks)
