@@ -78,6 +78,12 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
         playlist_name = "Duplicate Song Test: should contain 4 songs (DELETE ME)"
         await self._run_integration_test(input_file_name, playlist_name)
 
+    @unittest.skip("Skip integration tests by default")
+    async def test_end_to_end__for_artist_detection(self):
+        input_file_name = "test_artist_detection.txt"
+        playlist_name = "Artist Detection Song: JB, Bey, and Kiefer (DELETE ME)"
+        await self._run_integration_test(input_file_name, playlist_name)
+
     async def _run_integration_test(self, input_file_name, playlist_name):
         from song_scrounger.spotify_client import SpotifyClient
         from song_scrounger.util import get_spotify_creds, get_spotify_bearer_token
