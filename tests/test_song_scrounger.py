@@ -13,11 +13,6 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
         self.mock_spotify_client = AsyncMock()
         self.song_scrounger = SongScrounger(self.mock_spotify_client)
 
-    @classmethod
-    def _get_path_to_test_input_file(cls, name):
-        # Relative from repo root
-        return os.path.abspath(f"tests/test_inputs/{name}")
-
     @patch("song_scrounger.song_scrounger.read_file_contents", return_value="Mock corpus with \"Mock Track Name\"")
     @patch("song_scrounger.song_scrounger.find_quoted_tokens", return_value=["mock token"])
     async def test_create_playlist(self, mock_find_quoted_tokens, mock_read_file_contents):
@@ -39,7 +34,6 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
 
         mock_read_file_contents.assert_called_once_with("mock file path")
         mock_find_quoted_tokens.assert_called_once_with("Mock corpus with \"Mock Track Name\"")
-
 
     async def test_get_tracks__single_track(self):
         mock_spotify_track = MagicMock(name="Mock Spotify Track")
