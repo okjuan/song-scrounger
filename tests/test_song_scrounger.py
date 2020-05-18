@@ -61,3 +61,17 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
         self.mock_spotify_client.find_track.assert_any_call("Mock Song 2")
         self.mock_spotify_client.find_track.assert_any_call("Mock Song 3")
         self.assertEqual(len(tracks), 3, "Expected exactly 3 results.")
+
+    #@unittest.skip("Skip integration tests by default")
+    async def test_end_to_end(self):
+        from song_scrounger.spotify_client import SpotifyClient
+        from song_scrounger.util import get_spotify_creds, get_spotify_bearer_token
+        from tests import helper
+
+        spotify_client_id, spotify_secret_key = get_spotify_creds()
+        spotify_bearer_token = get_spotify_bearer_token()
+        spotify_client = SpotifyClient(spotify_client_id, spotify_secret_key, spotify_bearer_token)
+
+        song_scrounger = SongScrounger(spotify_client)
+        input_file_path = helper.get_path_to_test_input_file("test_song_scrounger.txt")
+        await song_scrounger.create_playlist(input_file_path, "(should contain 4 songs) DELETE ME: test_song_scrounger.test_end_to_end")
