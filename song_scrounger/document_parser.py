@@ -1,5 +1,5 @@
 def find_quoted_tokens(text):
-    """Retrieves all quoted strings.
+    """Retrieves all quoted strings in the order they occur in the given text.
     Params:
         text (str).
 

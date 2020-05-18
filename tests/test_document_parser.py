@@ -27,3 +27,49 @@ class TestDocumentParser(unittest.TestCase):
             [],
             "Should not have found any tokens.",
         )
+
+    def test_find_quoted_tokens__ignores_unbalanced(self):
+        tokens = find_quoted_tokens("For \" there is no closing quote")
+
+        self.assertEqual(
+            tokens,
+            [],
+            "Should not have found any tokens."
+        )
+
+    def test_find_quoted_tokens__ignores_final_unbalanced_quote(self):
+        text = "Here's \"a token\" but for \" there is no closing quote"
+
+        tokens = find_quoted_tokens(text)
+
+        self.assertEqual(
+            tokens,
+            ["a token"],
+            "Should not have found any tokens."
+        )
+
+    def test_find_quoted_tokens__preserves_order(self):
+        text = "\"first token\" and \"second token\""
+
+        tokens = find_quoted_tokens(text)
+
+        self.assertEqual(
+            tokens[0],
+            "first token",
+            "Did not find first token in expected position."
+        )
+        self.assertEqual(
+            tokens[1],
+            "second token",
+            "Did not find second token in expected position."
+        )
+
+    def test_find_quoted_tokens__preserves_dups(self):
+        text = "\"repeat token\" again \"repeat token\" again \"repeat token\""
+
+        tokens = find_quoted_tokens(text)
+
+        self.assertEqual(len(tokens), 3)
+        self.assertEqual(tokens[0], "repeat token")
+        self.assertEqual(tokens[1], "repeat token")
+        self.assertEqual(tokens[2], "repeat token")
