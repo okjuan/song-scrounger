@@ -45,6 +45,11 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
         self.mock_spotify_client.find_track.assert_called_once_with("Mock Song")
         self.assertEqual(len(tracks), 1, "Expected exactly 1 result.")
 
+    async def test_parse_tracks__no_dups(self):
+        tracks = self.song_scrounger.parse_tracks("Once \"Redbone\", twice \"Redbone\"")
+
+        self.assertEqual(list(tracks), ["Redbone"], "Expected only one result")
+
     async def test_get_tracks__multiple_tracks(self):
         mock_spotify_track = MagicMock(name="Mock Spotify Track")
         self.mock_spotify_client.configure_mock(**{

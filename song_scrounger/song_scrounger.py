@@ -33,16 +33,31 @@ class SongScrounger:
             tracks.append(track)
         return tracks
 
-    def parse_tracks(self, corpus):
-        """
+    def parse_tracks(self, text):
+        """Finds tracks in given text.
+
+        - Removes duplicates: only the first occurrence of each token is kept.
+        - Apart from duplicates, preserves order of tokens
+        - Strips whitespace and commas from beginning and end of each track name
+
         Params:
-            corpus (str): text in which to search for track names.
+            text (str): text in which to search for track names.
 
         Returns:
-            (Iterator of str): sequence of track names e.g. ["Redbone", "Hotline Bling"].
+            (str generator): sequence of track names such as "Redbone".
         """
-        track_names = find_quoted_tokens(corpus)
-        return map(lambda track_name: track_name.strip(" ,"), track_names)
+        track_names = find_quoted_tokens(text)
+        track_names = map(lambda track_name: track_name.strip(" ,"), track_names)
+
+        def remove_dups(items):
+            seen_already = set()
+            for item in items:
+                if item not in seen_already:
+                    seen_already.add(item)
+                    yield item
+        unique_track_names = remove_dups(track_names)
+
+        return unique_track_names
 
 async def main(input_file, playlist_name):
     client_id, secret_key = get_spotify_creds()
