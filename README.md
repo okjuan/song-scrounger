@@ -14,7 +14,11 @@ async def main():
     spotify_client = SpotifyClient(spotify_client_id, spotify_secret_key, spotify_bearer_token)
 
     song_scrounger = SongScrounger(spotify_client)
-    await song_scrounger.create_playlist("input_file.txt", "My New Playlist Created by Song Scrounger")
+    input_file_path = helper.get_path_to_test_input_file("input_file.txt")
+    tracks = song_scrounger.parse_tracks(input_file_path)
+    playlist_name = "My New Playlist Created by Song Scrounger"
+
+    await song_scrounger.create_playlist(playlist_name, tracks)
 
 if __name__ == "__main__":
     asyncio.run(main())
