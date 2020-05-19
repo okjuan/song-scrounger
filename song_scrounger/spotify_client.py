@@ -14,11 +14,10 @@ class SpotifyClient:
         self.secret_key = secret_key
         self.bearer_token = bearer_token
 
-    async def find_track(self, track_name, verbatim=True):
-        """
+    async def find_track(self, track_name):
+        """Finds the given track, ignoring case.
         Params:
             track_name (str).
-            verbatim (bool), optional: whether to match track name exactly, ignoring case.
 
         Returns:
             [spotify.Track]: resulting Spotify tracks.
@@ -34,11 +33,9 @@ class SpotifyClient:
             print("Could not add tracks to playlist with error:", e)
             raise e
 
-        if verbatim:
-            return [
-                track for track in results.tracks if track.name.lower() == track_name.lower()
-            ]
-        return results.tracks
+        return [
+            track for track in results.tracks if track.name.lower() == track_name.lower()
+        ]
 
     async def create_playlist(self, name):
         """

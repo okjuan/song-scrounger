@@ -17,18 +17,31 @@ class TestSpotifyClient(unittest.IsolatedAsyncioTestCase):
         bearer_token = get_spotify_bearer_token()
         cls.spotify_client = SpotifyClient(client_id, secret_key, bearer_token)
 
-    async def test_find_track_verbatim(self):
+    async def test_find_track__exact_match(self):
         track = "Redbone"
 
-        results = await self.spotify_client.find_track()
+        results = await self.spotify_client.find_track(track)
 
         self.assertGreater(len(results), 0, "Expected to find at least one match.")
-        inexact_matches = [ result for result in results if result.name.lower() != "redbone" ]
-        self.assertEqual(
-            len(inexact_matches),
-            0,
-            f"FAIL: found {len(inexact_matches)} songs that don't match track name exactly."
-        )
+        for result in results:
+            self.assertEqual(
+                result.name.lower(),
+                "redbone",
+                "At least one result does not match song name exactly."
+            )
+
+    async def test_find_track__empty_track_name__raises_value_error(self):
+        track = ""
+
+        with self.assertRaises(ValueError):
+            results = await self.spotify_client.find_track(track)
+
+    async def test_find_track__when_no_exact_match__returns_empty(self):
+        track = "nofasdflkdnfasfdbaskdfjabsdfjlkasfd"
+
+        results = await self.spotify_client.find_track(track)
+
+        self.assertEqual([], results, "Should not find any results")
 
     async def test_create_playlist(self):
         name = f"DELETE ME: created by test_create_playlist in song_scrounger {random.randint(0,10000)}"

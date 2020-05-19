@@ -7,28 +7,43 @@ def find_quoted_tokens(text):
         tokens (list): strings found between quotes.
 
     Notes:
-        - Assumes quotes are balanced
+        - Ignores trailing quote if quotes are unbalanced
+        - Skips empty tokens
     """
     if len(text) == 0:
         return []
 
     tokens = []
     while len(text) > 0:
-        quoted_text_start = text.find("\"")
-        if quoted_text_start == len(text)-1:
-            print("WARN: Found unbalanced opening delimiter '\"'")
-            break
-        elif quoted_text_start == -1:
+        quoted_token_indices = _find_first_two_quotes(text)
+        if quoted_token_indices is None:
             break
 
-        quoted_text_end = text.find("\"", quoted_text_start+1)
-        if quoted_text_end == -1:
-            print("WARN: Found unbalanced opening delimiter '\"'")
-            break
+        opening_quote_index, closing_quote_index = quoted_token_indices
+        if opening_quote_index < closing_quote_index:
+            tokens.append(text[opening_quote_index+1:closing_quote_index])
 
-        # Don't include empty string
-        if quoted_text_start < quoted_text_end:
-            tokens.append(text[quoted_text_start+1:quoted_text_end])
-
-        text = "" if quoted_text_end+1 == len(text) else text[quoted_text_end+1:]
+        text = "" if closing_quote_index+1 == len(text) else text[closing_quote_index+1:]
     return tokens
+
+def _find_first_two_quotes(text):
+    """Finds indices of first two quotation marks.
+
+    e.g. 'A "quote"' => (2,8)
+    e.g. 'No quote' => None
+    e.g. 'Not "balanced' => None
+
+    Params:
+        text (str): e.g. 'A "quote"'.
+    Returns:
+        ((int,int)): indices of first two quotes in given text. None if absent or unbalanced.
+    """
+    if len(text) <= 1:
+        return None
+
+    opening_quote_index = text.find("\"")
+    if opening_quote_index != -1:
+        closing_quote_index = text.find("\"", opening_quote_index+1)
+        if closing_quote_index != -1:
+            return opening_quote_index, closing_quote_index
+    return None
