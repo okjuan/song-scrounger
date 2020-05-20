@@ -1,7 +1,7 @@
 import asyncio
 import sys
 
-from .document_parser import find_quoted_tokens
+from .document_parser import DocumentParser
 from .spotify_client import SpotifyClient
 from .util import read_file_contents, get_spotify_creds, get_spotify_bearer_token
 
@@ -9,6 +9,7 @@ from .util import read_file_contents, get_spotify_creds, get_spotify_bearer_toke
 class SongScrounger:
     def __init__(self, spotify_client):
         self.spotify_client = spotify_client
+        self.document_parser = DocumentParser()
 
     async def create_playlist(self, name, track_names):
         """Creates Spotify playlist.
@@ -51,7 +52,7 @@ class SongScrounger:
             (str generator): sequence of track names such as "Redbone".
         """
         text = read_file_contents(input_file_path)
-        track_names = find_quoted_tokens(text)
+        track_names = self.document_parser.find_quoted_tokens(text)
         track_names = map(lambda track_name: track_name.strip(" ,"), track_names)
 
         def remove_dups(items):
