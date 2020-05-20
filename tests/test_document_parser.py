@@ -1,6 +1,6 @@
 import unittest
 
-from song_scrounger.document_parser import find_quoted_tokens
+from song_scrounger.document_parser import find_quoted_tokens, _find_first_two_quotes
 from song_scrounger.util import read_file_contents
 
 class TestDocumentParser(unittest.TestCase):
@@ -86,3 +86,34 @@ class TestDocumentParser(unittest.TestCase):
         self.assertEqual(tokens[0], "repeat token")
         self.assertEqual(tokens[1], "repeat token")
         self.assertEqual(tokens[2], "repeat token")
+
+    def test_find_first_two_quotes__empty_token(self):
+        text = "\"\""
+
+        opening_quote_index, closing_quote_index = _find_first_two_quotes(text)
+
+        self.assertEqual(0, opening_quote_index)
+        self.assertEqual(1, closing_quote_index)
+
+    def test_find_first_two_quotes__full_token(self):
+        text = "\"stuff in here\""
+
+        opening_quote_index, closing_quote_index = _find_first_two_quotes(text)
+
+        self.assertEqual(0, opening_quote_index)
+        self.assertEqual(14, closing_quote_index)
+
+    def test_find_first_two_quotes__unbalanced(self):
+        text = "\""
+
+        res = _find_first_two_quotes(text)
+
+        self.assertIsNone(res, "Expected 'None' for unbalanced token.")
+
+    def test_find_first_two_quotes__unbalanced_trailing(self):
+        text = "\"stuff in here\" but \"unbalanced"
+
+        opening_quote_index, closing_quote_index = _find_first_two_quotes(text)
+
+        self.assertEqual(0, opening_quote_index)
+        self.assertEqual(14, closing_quote_index)
