@@ -89,9 +89,15 @@ class DocumentParser():
             word (str): e.g. "Hello".
             text (str): e.g. "Hello dear".
         """
-        word = word.lower()
-        text = text.lower()
-        return text.find(word) != -1
+        word, text = word.lower(), text.lower()
+        if text.find(word) != -1:
+            return True
+
+        word_tokens = word.split(" ")
+        for token in word_tokens:
+            if text.find(token) == -1:
+                return False
+        return True
 
     def _get_paragraphs(self, text):
         "Returns non-empty paragraphs with one or more non-whitespace characters."

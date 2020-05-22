@@ -354,6 +354,31 @@ class TestDocumentParser(unittest.IsolatedAsyncioTestCase):
         self.document_parser.is_mentioned.assert_called_once_with("Justin Bieber", text)
         self.assertEqual(len(filtered_songs), 0)
 
+    async def test_filter_by_mentioned_artist__multiple_artist_per_song__skips_duplicates(self):
+        text = "\"Sorry\" by Billie Eilish and brother Finneas O'Connell"
+        songs = [Song(
+            "bad guy",
+            "spotify:track:2Fxmhks0bxGSBdJ92vM42m",
+            ["Billie Eilish", "Finneas O'Connell"]
+        )]
+        self.document_parser.is_mentioned = MagicMock(return_value=True)
+
+        filtered_songs = self.document_parser.filter_by_mentioned_artist(songs, text)
+
+        self.assertTrue(
+            get_num_times_called(self.document_parser.is_mentioned) >= 1)
+        self.assertEqual(len(filtered_songs), 1)
+        filtered_songs_list = list(filtered_songs)
+        self.assertEqual(filtered_songs_list[0].name, "bad guy")
+        self.assertEqual(
+            filtered_songs_list[0].spotify_uri,
+            "spotify:track:2Fxmhks0bxGSBdJ92vM42m"
+        )
+        self.assertEqual(
+            filtered_songs_list[0].artists,
+            ["Billie Eilish", "Finneas O'Connell"]
+        )
+
     @unittest.skip("Enable when implemented")
     async def test_filter_by_mentioned_artist__song_name_artist_name_clash(self):
         # TODO: what if a song name is found as an artist name?
@@ -494,6 +519,14 @@ class TestDocumentParser(unittest.IsolatedAsyncioTestCase):
         is_mentioned = self.document_parser.is_mentioned(word, text)
 
         self.assertFalse(is_mentioned)
+
+    async def test_is_mentioned__tokens_match_but_whole_word_is_not_substr(self):
+        # actual example: http://www.dntownsend.com/Site/Rock/3change.htm
+        word, text = "Paul Anka", "Paul (\"Put Your Head on My Shoulder\") Anka"
+
+        is_mentioned = self.document_parser.is_mentioned(word, text)
+
+        self.assertTrue(is_mentioned)
 
     @unittest.skip("Enable when implemented")
     async def test_is_mentioned__whole_word(self):
