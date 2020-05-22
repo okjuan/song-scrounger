@@ -28,7 +28,7 @@ class DocumentParser():
         results = defaultdict(set)
         paragraphs = self._get_paragraphs(text)
         for paragraph in paragraphs:
-            song_names = self.find_quoted_tokens(paragraph)
+            song_names = self.find_song_names(paragraph)
             for song_name in song_names:
                 songs = await self.search_spotify(song_name)
                 filtered_songs = self.filter_if_any_artists_mentioned(songs, text)
@@ -105,6 +105,16 @@ class DocumentParser():
         "Returns non-empty paragraphs with one or more non-whitespace characters."
         paragraphs = text.split("\n")
         return [p for p in paragraphs if len(p.strip(" ")) > 0]
+
+    def find_song_names(self, text):
+        """Parses song names, removing whitespace and punctuation.
+
+        Params:
+            text (str): e.g. "I keep using the example \"Sorry\" by Justin Bieber"
+        """
+        song_names = self.find_quoted_tokens(text)
+        song_names = map(lambda song_name: song_name.strip(" "), song_names)
+        return map(lambda song_name: song_name.rstrip(",."), song_names)
 
     def find_quoted_tokens(self, text):
         """Retrieves all quoted strings in the order they occur in the given text.

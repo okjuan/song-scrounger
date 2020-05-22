@@ -103,6 +103,34 @@ class TestDocumentParser(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(tokens[1], "repeat token")
         self.assertEqual(tokens[2], "repeat token")
 
+    async def test_find_songs_names__strips_whitespace(self):
+        text = MagicMock()
+        self.document_parser.find_quoted_tokens = MagicMock(return_value = [
+            "  leading",
+            "trailing   ",
+            "  both   ",
+        ])
+
+        song_names = self.document_parser.find_song_names(text)
+
+        song_names_list = list(song_names)
+        self.assertEqual(len(song_names_list), 3)
+        self.assertEqual(set(song_names_list), set(["leading", "trailing", "both"]))
+
+    async def test_find_songs_names__strips_trailing_punctuation(self):
+        text = MagicMock()
+        self.document_parser.find_quoted_tokens = MagicMock(return_value = [
+            ",leading",
+            "trailing.",
+            ".both,",
+        ])
+
+        song_names = self.document_parser.find_song_names(text)
+
+        song_names_list = list(song_names)
+        self.assertEqual(len(song_names_list), 3)
+        self.assertEqual(set(song_names_list), set([",leading", "trailing", ".both"]))
+
     async def test_find_songs__returns_only_filtered_songs(self):
         text = "\"Sorry\" by Justin Bieber."
         songs = [
@@ -120,7 +148,7 @@ class TestDocumentParser(unittest.IsolatedAsyncioTestCase):
         self.document_parser._get_paragraphs = MagicMock(
             return_value=[text]
         )
-        self.document_parser.find_quoted_tokens = MagicMock(
+        self.document_parser.find_song_names = MagicMock(
             return_value = ["Sorry"]
         )
         self.document_parser.search_spotify = AsyncMock(
@@ -133,7 +161,7 @@ class TestDocumentParser(unittest.IsolatedAsyncioTestCase):
         results = await self.document_parser.find_songs(text)
 
         self.document_parser._get_paragraphs.assert_called_once_with(text)
-        self.document_parser.find_quoted_tokens.assert_called_once_with(text)
+        self.document_parser.find_song_names.assert_called_once_with(text)
         self.document_parser.search_spotify.assert_called_once_with("Sorry")
         self.document_parser.filter_if_any_artists_mentioned.assert_any_call(
             songs, text
@@ -148,7 +176,7 @@ class TestDocumentParser(unittest.IsolatedAsyncioTestCase):
         self.document_parser._get_paragraphs = MagicMock(
             return_value=[text]
         )
-        self.document_parser.find_quoted_tokens = MagicMock(
+        self.document_parser.find_song_names = MagicMock(
             return_value = ["Sorry", "Sorry"]
         )
         songs = [
@@ -168,7 +196,7 @@ class TestDocumentParser(unittest.IsolatedAsyncioTestCase):
         results = await self.document_parser.find_songs(text)
 
         self.document_parser._get_paragraphs.assert_called_once_with(text)
-        self.document_parser.find_quoted_tokens.assert_called_once_with(text)
+        self.document_parser.find_song_names.assert_called_once_with(text)
         self.document_parser.search_spotify.assert_any_call("Sorry")
         self.assertEqual(
             get_num_times_called(self.document_parser.search_spotify), 2)
@@ -186,7 +214,7 @@ class TestDocumentParser(unittest.IsolatedAsyncioTestCase):
         text = "\"Sorry\" by Justin Bieber...\n\"Sorry\" by Nothing But Thieves"
         self.document_parser._get_paragraphs = MagicMock(return_value=[
             "\"Sorry\" by Justin Bieber...", "\"Sorry\" by Nothing But Thieves"])
-        self.document_parser.find_quoted_tokens = MagicMock(
+        self.document_parser.find_song_names = MagicMock(
             return_value = ["Sorry"]
         )
         songs = [
@@ -211,12 +239,14 @@ class TestDocumentParser(unittest.IsolatedAsyncioTestCase):
         results = await self.document_parser.find_songs(text)
 
         self.document_parser._get_paragraphs.assert_called_once_with(text)
-        self.document_parser.find_quoted_tokens.assert_any_call(
+        self.assertEqual(
+            get_num_times_called(self.document_parser.find_song_names), 2)
+        self.document_parser.find_song_names.assert_any_call(
             "\"Sorry\" by Justin Bieber...")
-        self.document_parser.find_quoted_tokens.assert_any_call(
+        self.document_parser.find_song_names.assert_any_call(
             "\"Sorry\" by Nothing But Thieves")
         self.assertEqual(
-            get_num_times_called(self.document_parser.find_quoted_tokens), 2)
+            get_num_times_called(self.document_parser.find_song_names), 2)
         self.document_parser.search_spotify.assert_any_call("Sorry")
         self.assertEqual(
             get_num_times_called(self.document_parser.search_spotify), 2)
