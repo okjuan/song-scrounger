@@ -1,7 +1,3 @@
-In this case, this song "Sorry" should be detected to be by Justin Bieber because I mentioned him.
-
-Even though, in this separate paragraph, I mention Beyonce, who also has a song named "Sorry". Now, in this case, this song should be detected to be by her. This means that the duplicate detection needs to be smart enough to find this out.
-
 Now I'm in some other paragraph over here, mentioning the artist Kiefer.
 
 The artist that I mentioned in the previous paragraph has a song called "Island". Even though I don't mention him in this paragraph, I don't mention any other artist that has a song by that name, so it'd be nice for the program to detect him (the guy I mentioned in the last paragraph) as a potential artist.

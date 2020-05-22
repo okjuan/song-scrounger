@@ -1,6 +1,5 @@
 import asyncio
 import os
-import random
 import unittest
 
 from song_scrounger.spotify_client import SpotifyClient
@@ -44,9 +43,20 @@ class TestSpotifyClient(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([], results, "Should not find any results")
 
     async def test_create_playlist(self):
-        name = f"DELETE ME: created by test_create_playlist in song_scrounger {random.randint(0,10000)}"
+        name = f"DELETE ME: test_create_playlist in song_scrounger"
+        spotify_uris = [
+            "spotify:track:09CtPGIpYB4BrO8qb1RGsF",
+            "spotify:track:6rAXHPd18PZ6W8m9EectzH"
+        ]
 
-        playlist = await self.spotify_client.create_playlist(name)
+        playlist = await self.spotify_client.create_playlist(name, spotify_uris)
+
+        self.assertIsNotNone(playlist, "Playlist creation failed: received 'None' as result")
+
+    async def test_create_empty_playlist(self):
+        name = f"DELETE ME: test_create_empty_playlist in song_scrounger"
+
+        playlist = await self.spotify_client.create_empty_playlist(name)
 
         self.assertIsNotNone(playlist, "Playlist creation failed: received 'None' as result")
 
