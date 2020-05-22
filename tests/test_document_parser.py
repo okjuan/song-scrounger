@@ -241,6 +241,7 @@ class TestDocumentParser(unittest.IsolatedAsyncioTestCase):
 
         self.mock_spotify_client.find_track.assert_called_once_with("Sorry")
         self.assertEqual(len(songs), 2)
+        # TODO: once Song.__eq__ is implemented, comparse songs normally
         self.assertEqual(songs[0].name, expected_songs[0].name)
         self.assertEqual(songs[0].spotify_uri, expected_songs[0].spotify_uri)
         self.assertEqual(songs[0].artists, expected_songs[0].artists)
