@@ -70,17 +70,17 @@ class DocumentParser():
             song_name (str): e.g. "Sorry".
 
         Returns:
-            songs (set(Song)).
+            (set(Song)).
         """
-        songs = set()
         tracks = await self.spotify_client.find_track(song_name)
-        for track in tracks:
-            songs.add(Song(
+        return {
+            Song(
                 track.name,
                 track.uri,
                 [artist.name for artist in track.artists]
-            ))
-        return songs
+            )
+            for track in tracks
+        }
 
     def is_mentioned(self, word, text):
         """True iff text contains word, ignoring case.
