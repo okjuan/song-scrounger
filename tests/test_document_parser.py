@@ -20,7 +20,7 @@ class TestDocumentParser(unittest.IsolatedAsyncioTestCase):
         self.mock_spotify_client = AsyncMock()
         self.document_parser = DocumentParser(self.mock_spotify_client)
 
-    async def test_find_single_token(self):
+    async def test_find_quoted_tokens__returns_single_token(self):
         text = "Should \"Find this\" at least"
 
         tokens = self.document_parser.find_quoted_tokens(text)
@@ -31,7 +31,7 @@ class TestDocumentParser(unittest.IsolatedAsyncioTestCase):
             "Faild to find only token in text.",
         )
 
-    async def test_find_tokens(self):
+    async def test_find_quoted_tokens(self):
         text = """
             When Don McClean recorded "American Pie" in 1972 he was remembering his own youth and the early innocence of rock 'n' roll fifteen years before; he may not have considered that he was also contributing the most sincere historical treatise ever fashioned on the vast social transition from the 1950s to the 1960s. For the record, "the day the music died" refers to Buddy Holly's February 1959 death in a plane crash in North Dakota that also took the lives of Richie ("La Bamba") Valens and The Big Bopper ("Chantilly Lace"). The rest of "American Pie" describes the major rock stars of the sixties and their publicity-saturated impact on the music scene: the Jester is Bob Dylan, the Sergeants are the Beatles, Satan is Mick Jagger. For 1950s teens who grew up with the phenomenon of primordial rock 'n' roll, the changes of the sixties might have seemed to turn the music into something very different: "We all got up to dance / Oh, but we never got the chance." There's no doubt that
         """
@@ -44,7 +44,7 @@ class TestDocumentParser(unittest.IsolatedAsyncioTestCase):
             "Failed to find all tokens.",
         )
 
-    async def test_find_none(self):
+    async def test_find_quoted_tokens__no_tokens__returns_empty(self):
         text = "Nothing to see here."
 
         tokens = self.document_parser.find_quoted_tokens(text)
@@ -102,37 +102,6 @@ class TestDocumentParser(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(tokens[0], "repeat token")
         self.assertEqual(tokens[1], "repeat token")
         self.assertEqual(tokens[2], "repeat token")
-
-    async def test_find_first_two_quotes__empty_token(self):
-        text = "\"\""
-
-        opening_quote_index, closing_quote_index = self.document_parser._find_first_two_quotes(text)
-
-        self.assertEqual(0, opening_quote_index)
-        self.assertEqual(1, closing_quote_index)
-
-    async def test_find_first_two_quotes__full_token(self):
-        text = "\"stuff in here\""
-
-        opening_quote_index, closing_quote_index = self.document_parser._find_first_two_quotes(text)
-
-        self.assertEqual(0, opening_quote_index)
-        self.assertEqual(14, closing_quote_index)
-
-    async def test_find_first_two_quotes__unbalanced(self):
-        text = "\""
-
-        res = self.document_parser._find_first_two_quotes(text)
-
-        self.assertIsNone(res, "Expected 'None' for unbalanced token.")
-
-    async def test_find_first_two_quotes__unbalanced_trailing(self):
-        text = "\"stuff in here\" but \"unbalanced"
-
-        opening_quote_index, closing_quote_index = self.document_parser._find_first_two_quotes(text)
-
-        self.assertEqual(0, opening_quote_index)
-        self.assertEqual(14, closing_quote_index)
 
     async def test_find_songs__returns_only_filtered_songs(self):
         text = "\"Sorry\" by Justin Bieber."
