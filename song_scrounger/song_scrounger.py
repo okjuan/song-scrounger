@@ -9,7 +9,7 @@ from .util import read_file_contents, get_spotify_creds, get_spotify_bearer_toke
 class SongScrounger:
     def __init__(self, spotify_client):
         self.spotify_client = spotify_client
-        self.document_parser = DocumentParser()
+        self.document_parser = DocumentParser(self.spotify_client)
 
     async def create_playlist(self, name, track_names):
         """Creates Spotify playlist.
