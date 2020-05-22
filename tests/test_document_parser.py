@@ -133,7 +133,7 @@ class TestDocumentParser(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(0, opening_quote_index)
         self.assertEqual(14, closing_quote_index)
 
-    async def test_find_songs(self):
+    async def test_find_songs__returns_only_filtered_songs(self):
         text = "\"Sorry\" by Justin Bieber."
         songs = [
             Song(
@@ -156,7 +156,7 @@ class TestDocumentParser(unittest.IsolatedAsyncioTestCase):
         self.document_parser.search_spotify = AsyncMock(
             return_value = songs
         )
-        self.document_parser.filter_by_mentioned_artist = MagicMock(
+        self.document_parser.filter_if_any_artists_mentioned = MagicMock(
             return_value = set([songs[0]])
         )
 
@@ -165,13 +165,63 @@ class TestDocumentParser(unittest.IsolatedAsyncioTestCase):
         self.document_parser._get_paragraphs.assert_called_once_with(text)
         self.document_parser.find_quoted_tokens.assert_called_once_with(text)
         self.document_parser.search_spotify.assert_called_once_with("Sorry")
-        self.document_parser.filter_by_mentioned_artist.assert_called_once_with(
+        self.document_parser.filter_if_any_artists_mentioned.assert_any_call(
             songs, text
         )
         self.assertEqual(len(results.keys()), 1)
         self.assertTrue("Sorry" in results.keys())
         self.assertEqual(len(results["Sorry"]), 1)
         self.assertEqual(results["Sorry"][0], "spotify:track:09CtPGIpYB4BrO8qb1RGsF")
+
+    async def test_filter_if_any_artists_mentioned__only_keeps_mentioned_artist(self):
+        text = "\"Sorry\""
+        songs = [
+            Song(
+                "Sorry",
+                "spotify:track:09CtPGIpYB4BrO8qb1RGsF",
+                ["Justin Bieber"]
+            ),
+            Song(
+                "Sorry",
+                "spotify:track:6rAXHPd18PZ6W8m9EectzH",
+                ["Nothing But Thieves"]
+            )
+        ]
+        self.document_parser.filter_by_mentioned_artist = MagicMock(
+            return_value = set([songs[0]])
+        )
+
+        filtered_songs = self.document_parser.filter_if_any_artists_mentioned(songs, text)
+
+        self.document_parser.filter_by_mentioned_artist.assert_called_once_with(
+            songs, text
+        )
+        self.assertEqual(filtered_songs, set([songs[0]]))
+
+    async def test_filter_if_any_artists_mentioned__no_artist_mentioned__keeps_all_songs(self):
+        text = "\"Sorry\""
+        songs = [
+            Song(
+                "Sorry",
+                "spotify:track:09CtPGIpYB4BrO8qb1RGsF",
+                ["Justin Bieber"]
+            ),
+            Song(
+                "Sorry",
+                "spotify:track:6rAXHPd18PZ6W8m9EectzH",
+                ["Nothing But Thieves"]
+            )
+        ]
+        self.document_parser.filter_by_mentioned_artist = MagicMock(
+            return_value = set()
+        )
+
+        filtered_songs = self.document_parser.filter_if_any_artists_mentioned(songs, text)
+
+        self.document_parser.filter_by_mentioned_artist.assert_called_once_with(
+            songs, text
+        )
+        self.assertEqual(filtered_songs, set(songs))
 
     async def test_filter_by_mentioned_artist__only_returns_song_by_mentioned_artist(self):
         text = "\"Sorry\" by Justin Bieber"

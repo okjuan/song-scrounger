@@ -27,12 +27,16 @@ class DocumentParser():
             song_names = self.find_quoted_tokens(paragraph)
             for song_name in song_names:
                 songs = await self.search_spotify(song_name)
-                songs_with_mentioned_artists = self.filter_by_mentioned_artist(songs, text)
-                if len(songs_with_mentioned_artists) > 0:
-                    results[song_name] = [song.spotify_uri for song in songs_with_mentioned_artists]
-                else:
-                    results[song_name] = [song.spotify_uri for song in songs]
+                filtered_songs = self.filter_if_any_artists_mentioned(songs, text)
+                # TODO: what if song_name in results?
+                results[song_name] = [song.spotify_uri for song in filtered_songs]
         return results
+
+    def filter_if_any_artists_mentioned(self, songs, text):
+        songs_with_mentioned_artists = self.filter_by_mentioned_artist(songs, text)
+        if len(songs_with_mentioned_artists) == 0:
+            return set(songs)
+        return songs_with_mentioned_artists
 
     def filter_by_mentioned_artist(self, songs, text):
         songs_whose_artists_are_mentioned = set()
