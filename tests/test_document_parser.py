@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from song_scrounger.document_parser import DocumentParser
 from song_scrounger.models.song import Song
 from song_scrounger.util import read_file_contents
+from tests.helper import get_num_times_called
 
 
 class TestDocumentParser(unittest.IsolatedAsyncioTestCase):
@@ -171,7 +172,100 @@ class TestDocumentParser(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(results.keys()), 1)
         self.assertTrue("Sorry" in results.keys())
         self.assertEqual(len(results["Sorry"]), 1)
-        self.assertEqual(results["Sorry"][0], "spotify:track:09CtPGIpYB4BrO8qb1RGsF")
+        self.assertEqual(results["Sorry"], set(["spotify:track:09CtPGIpYB4BrO8qb1RGsF"]))
+
+    async def test_find_songs__duplicate_finds__returns_only_one(self):
+        text = "\"Sorry\" by Justin Bieber... as I said, \"Sorry\"..."
+        self.document_parser._get_paragraphs = MagicMock(
+            return_value=[text]
+        )
+        self.document_parser.find_quoted_tokens = MagicMock(
+            return_value = ["Sorry", "Sorry"]
+        )
+        songs = [
+            Song(
+                "Sorry",
+                "spotify:track:09CtPGIpYB4BrO8qb1RGsF",
+                ["Justin Bieber"]
+            )
+        ]
+        self.document_parser.search_spotify = AsyncMock(
+            return_value = songs
+        )
+        self.document_parser.filter_if_any_artists_mentioned = MagicMock(
+            return_value = set(songs)
+        )
+
+        results = await self.document_parser.find_songs(text)
+
+        self.document_parser._get_paragraphs.assert_called_once_with(text)
+        self.document_parser.find_quoted_tokens.assert_called_once_with(text)
+        self.document_parser.search_spotify.assert_any_call("Sorry")
+        self.assertEqual(
+            get_num_times_called(self.document_parser.search_spotify), 2)
+        self.document_parser.filter_if_any_artists_mentioned.assert_any_call(
+            songs, text
+        )
+        self.assertEqual(get_num_times_called(
+            self.document_parser.filter_if_any_artists_mentioned), 2)
+        self.assertEqual(len(results.keys()), 1)
+        self.assertTrue("Sorry" in results.keys())
+        self.assertEqual(len(results["Sorry"]), 1)
+        self.assertEqual(results["Sorry"], set(["spotify:track:09CtPGIpYB4BrO8qb1RGsF"]))
+
+    async def test_find_songs__multiple_finds_w_different_artists__merges_results(self):
+        text = "\"Sorry\" by Justin Bieber...\n\"Sorry\" by Nothing But Thieves"
+        self.document_parser._get_paragraphs = MagicMock(return_value=[
+            "\"Sorry\" by Justin Bieber...", "\"Sorry\" by Nothing But Thieves"])
+        self.document_parser.find_quoted_tokens = MagicMock(
+            return_value = ["Sorry"]
+        )
+        songs = [
+            Song(
+                "Sorry",
+                "spotify:track:09CtPGIpYB4BrO8qb1RGsF",
+                ["Justin Bieber"]
+            ),
+            Song(
+                "Sorry",
+                "spotify:track:6rAXHPd18PZ6W8m9EectzH",
+                ["Nothing But Thieves"]
+            )
+        ]
+        self.document_parser.search_spotify = AsyncMock(
+            return_value = songs
+        )
+        self.document_parser.filter_if_any_artists_mentioned = MagicMock(
+            return_value = set(songs)
+        )
+
+        results = await self.document_parser.find_songs(text)
+
+        self.document_parser._get_paragraphs.assert_called_once_with(text)
+        self.document_parser.find_quoted_tokens.assert_any_call(
+            "\"Sorry\" by Justin Bieber...")
+        self.document_parser.find_quoted_tokens.assert_any_call(
+            "\"Sorry\" by Nothing But Thieves")
+        self.assertEqual(
+            get_num_times_called(self.document_parser.find_quoted_tokens), 2)
+        self.document_parser.search_spotify.assert_any_call("Sorry")
+        self.assertEqual(
+            get_num_times_called(self.document_parser.search_spotify), 2)
+        self.document_parser.filter_if_any_artists_mentioned.assert_any_call(
+            songs, text
+        )
+        self.assertEqual(get_num_times_called(
+            self.document_parser.filter_if_any_artists_mentioned), 2)
+        self.assertEqual(len(results.keys()), 1)
+        self.assertTrue("Sorry" in results.keys())
+        self.assertEqual(len(results["Sorry"]), 2)
+        self.assertEqual(
+            results["Sorry"],
+            set([
+                "spotify:track:09CtPGIpYB4BrO8qb1RGsF",
+                "spotify:track:6rAXHPd18PZ6W8m9EectzH"
+            ])
+        )
 
     async def test_filter_if_any_artists_mentioned__only_keeps_mentioned_artist(self):
         text = "\"Sorry\""
@@ -260,6 +354,11 @@ class TestDocumentParser(unittest.IsolatedAsyncioTestCase):
         self.document_parser.is_mentioned.assert_called_once_with("Justin Bieber", text)
         self.assertEqual(len(filtered_songs), 0)
 
+    @unittest.skip("Enable when implemented")
+    async def test_filter_by_mentioned_artist__song_name_artist_name_clash(self):
+        # TODO: what if a song name is found as an artist name?
+        pass
+
     async def test_search_spotify__returns_song_objects(self):
         song = "Sorry"
         self.mock_spotify_client.find_track.return_value = [
@@ -291,13 +390,54 @@ class TestDocumentParser(unittest.IsolatedAsyncioTestCase):
 
         self.mock_spotify_client.find_track.assert_called_once_with("Sorry")
         self.assertEqual(len(songs), 2)
-        # TODO: once Song.__eq__ is implemented, comparse songs normally
-        self.assertEqual(songs[0].name, expected_songs[0].name)
-        self.assertEqual(songs[0].spotify_uri, expected_songs[0].spotify_uri)
-        self.assertEqual(songs[0].artists, expected_songs[0].artists)
-        self.assertEqual(songs[1].name, expected_songs[1].name)
-        self.assertEqual(songs[1].spotify_uri, expected_songs[1].spotify_uri)
-        self.assertEqual(songs[1].artists, expected_songs[1].artists)
+        # TODO: once Song.__eq__ is implemented, compare songs normally
+        songs_list = list(songs)
+        self.assertIn(songs_list[0].name, [expected_songs[0].name, expected_songs[1].name])
+        self.assertIn(
+            songs_list[0].spotify_uri,
+            [expected_songs[0].spotify_uri, expected_songs[1].spotify_uri]
+        )
+        self.assertIn(
+            songs_list[0].artists,
+            [expected_songs[0].artists, expected_songs[1].artists]
+        )
+        self.assertIn(songs_list[1].name, [expected_songs[0].name, expected_songs[1].name])
+        self.assertIn(
+            songs_list[1].spotify_uri,
+            [expected_songs[0].spotify_uri, expected_songs[1].spotify_uri]
+        )
+        self.assertIn(
+            songs_list[0].artists,
+            [expected_songs[0].artists, expected_songs[1].artists]
+        )
+
+    async def test_search_spotify__multiple_artists_per_song(self):
+        song = "bad guy"
+        self.mock_spotify_client.find_track.return_value = [
+            self.mock_spotify_track_factory(
+                name="bad guy",
+                artists=[
+                    self.mock_spotify_artist_factory(name="Billie Eilish"),
+                    self.mock_spotify_artist_factory(name="Finneas O'Connell")
+                ],
+                uri="spotify:track:2Fxmhks0bxGSBdJ92vM42m",
+            ),
+        ]
+        expected_songs = [Song(
+            "bad guy",
+            "spotify:track:2Fxmhks0bxGSBdJ92vM42m",
+            ["Billie Eilish", "Finneas O'Connell"]
+        )]
+
+        songs = await self.document_parser.search_spotify(song)
+
+        self.mock_spotify_client.find_track.assert_called_once_with("bad guy")
+        self.assertEqual(len(songs), 1)
+        # TODO: once Song.__eq__ is implemented, compare songs normally
+        songs_list = list(songs)
+        self.assertEqual(songs_list[0].name, expected_songs[0].name)
+        self.assertEqual(songs_list[0].spotify_uri, expected_songs[0].spotify_uri)
+        self.assertEqual(songs_list[0].artists, expected_songs[0].artists)
 
     async def test_get_paragraphs__no_newlines(self):
         text = "Only paragraph"
@@ -385,13 +525,12 @@ class TestDocumentParser(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(1, len(results.keys()))
         self.assertIn("Sorry", results.keys())
         self.assertEqual(len(results["Sorry"]), 1)
-        self.assertEqual(results["Sorry"], ["spotify:track:09CtPGIpYB4BrO8qb1RGsF"])
+        self.assertEqual(results["Sorry"], set(["spotify:track:09CtPGIpYB4BrO8qb1RGsF"]))
 
     @unittest.skip("Integration tests disabled by default")
     async def test_find_songs__no_mocks__simple(self):
         from song_scrounger.spotify_client import SpotifyClient
         from song_scrounger.util import get_spotify_creds, get_spotify_bearer_token
-        from tests import helper
 
         spotify_client_id, spotify_secret_key = get_spotify_creds()
         spotify_bearer_token = get_spotify_bearer_token()
@@ -404,7 +543,7 @@ class TestDocumentParser(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(1, len(results.keys()))
         self.assertIn("Sorry", results.keys())
         self.assertEqual(len(results["Sorry"]), 1)
-        self.assertEqual(results["Sorry"], ["spotify:track:09CtPGIpYB4BrO8qb1RGsF"])
+        self.assertEqual(results["Sorry"], set(["spotify:track:09CtPGIpYB4BrO8qb1RGsF"]))
 
     @unittest.skip("Integration tests disabled by default")
     async def test_find_songs__no_mocks__two_artists(self):
@@ -436,7 +575,6 @@ class TestDocumentParser(unittest.IsolatedAsyncioTestCase):
     async def test_find_songs__no_mocks__no_artists_filtered(self):
         from song_scrounger.spotify_client import SpotifyClient
         from song_scrounger.util import get_spotify_creds, get_spotify_bearer_token
-        from tests import helper
 
         spotify_client_id, spotify_secret_key = get_spotify_creds()
         spotify_bearer_token = get_spotify_bearer_token()

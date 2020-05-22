@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from .spotify_client import SpotifyClient
 from .models.song import Song
 
@@ -18,27 +20,43 @@ class DocumentParser():
                 and perhaps some of their artists.
 
         Returns:
-            (dict): key (str) is song name; val ([str]) is spotify URIs
+            (dict): key (str) is song name; val (set(str)) is spotify URIs
                 of matching songs, empty if no matching artist mentioned.
         """
-        results = {}
+        results = defaultdict(set)
         paragraphs = self._get_paragraphs(text)
         for paragraph in paragraphs:
             song_names = self.find_quoted_tokens(paragraph)
             for song_name in song_names:
                 songs = await self.search_spotify(song_name)
                 filtered_songs = self.filter_if_any_artists_mentioned(songs, text)
-                # TODO: what if song_name in results?
-                results[song_name] = [song.spotify_uri for song in filtered_songs]
+                spotify_uris = set([song.spotify_uri for song in filtered_songs])
+                results[song_name] |= spotify_uris
         return results
 
     def filter_if_any_artists_mentioned(self, songs, text):
+        """
+        Params:
+            songs (set(Song)).
+            text (str).
+
+        Return:
+            (set(Song)).
+        """
         songs_with_mentioned_artists = self.filter_by_mentioned_artist(songs, text)
         if len(songs_with_mentioned_artists) == 0:
             return set(songs)
         return songs_with_mentioned_artists
 
     def filter_by_mentioned_artist(self, songs, text):
+        """Returns only songs whose artist(s) is/are mentioned in the text.
+        Params:
+            songs (set(Song)).
+            text (str).
+
+        Return:
+            (set(Song)).
+        """
         songs_whose_artists_are_mentioned = set()
         for song in songs:
             for artist in song.artists:
@@ -46,23 +64,22 @@ class DocumentParser():
                     songs_whose_artists_are_mentioned.add(song)
         return songs_whose_artists_are_mentioned
 
-    async def search_spotify(self, song):
+    async def search_spotify(self, song_name):
         """
         Params:
-            song (str): e.g. "Sorry".
+            song_name (str): e.g. "Sorry".
 
         Returns:
-            songs ([Song]).
+            songs (set(Song)).
         """
-        songs = []
-        tracks = await self.spotify_client.find_track(song)
+        songs = set()
+        tracks = await self.spotify_client.find_track(song_name)
         for track in tracks:
-            for artist in track.artists:
-                songs.append(Song(
-                    track.name,
-                    track.uri,
-                    [artist.name for artist in track.artists]
-                ))
+            songs.add(Song(
+                track.name,
+                track.uri,
+                [artist.name for artist in track.artists]
+            ))
         return songs
 
     def is_mentioned(self, word, text):
