@@ -4,7 +4,6 @@ from spotify import Client
 from spotify.errors import SpotifyException
 
 
-# TODO: update return types to hide package-specific models
 class SpotifyClient:
     """
     Wrapper for Spotify library of choice.
