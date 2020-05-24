@@ -15,10 +15,18 @@ async def main():
 
     song_scrounger = SongScrounger(spotify_client)
     input_file_path = helper.get_path_to_test_input_file("input_file.txt")
-    tracks = song_scrounger.parse_tracks(input_file_path)
-    playlist_name = "My New Playlist Created by Song Scrounger"
+    songs = await song_scrounger.find_songs(input_file_path)
 
-    await song_scrounger.create_playlist(playlist_name, tracks)
+    # When no relevant artist is found in the input file,
+    # Song Scrounger returns multiple matches based purely on song name
+    all_matching_spotify_uris = []
+    for _, spotify_uris in songs.items():
+        all_matching_spotify_uris.extend(list(spotify_uris))
+
+    playlist_name = "My New Playlist Created by Song Scrounger"
+    await spotify_client.create_playlist(playlist_name, all_matching_spotify_uris)
+
+
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -37,7 +37,17 @@ class SpotifyClient:
             track for track in results.tracks if track.name.lower() == track_name.lower()
         ]
 
-    async def create_playlist(self, name):
+    async def create_playlist(self, name, spotify_uris):
+        """Creates Spotify playlist containing given tracks.
+
+        Params:
+            name (str).
+            spotify_uris ([str]).
+        """
+        playlist = await self.create_empty_playlist(name)
+        return await self.add_tracks(playlist, spotify_uris)
+
+    async def create_empty_playlist(self, name):
         """
         Params:
             name (str): name for new playlist.
@@ -60,11 +70,11 @@ class SpotifyClient:
         finally:
             await http_cli.close()
 
-    async def add_tracks(self, playlist, tracks):
+    async def add_tracks(self, playlist, spotify_uris):
         """
         Params:
             playlist : spotify.Playlist, or str of Playlist URI.
-            tracks : [spotify.Track], or [str] containing Spotify track URIs.
+            spotify_uris ([str]).
 
         Returns:
             (spotify.Playlist): the same one given as param.
@@ -74,8 +84,8 @@ class SpotifyClient:
         try:
             async with Client(self.client_id, self.secret_key) as spotify_client:
                 user = spotify.User(spotify_client, data, http=http_cli)
-                for track in tracks:
-                    await user.add_tracks(playlist, track)
+                for uri in spotify_uris:
+                    await user.add_tracks(playlist, uri)
         except SpotifyException as e:
             print("Could not add tracks to playlist with error:", e)
             raise e
