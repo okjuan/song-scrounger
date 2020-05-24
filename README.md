@@ -1,5 +1,5 @@
 # Song Scrounger
-A little tool for creating playlists out of songs mentioned in a text file. You can use it to create playlists out of songs mentioned on a web page.
+A little tool for creating Spotify playlists based on song names mentioned in text, like [this webpage](http://www.dntownsend.com/Site/Rock/4unrest.htm).
 
 ```python
 import asyncio
@@ -14,14 +14,17 @@ async def main():
     spotify_client = SpotifyClient(spotify_client_id, spotify_secret_key, spotify_bearer_token)
 
     song_scrounger = SongScrounger(spotify_client)
-    input_file_path = helper.get_path_to_test_input_file("input_file.txt")
+    # assuming it is in the current working directory
+    input_file_path = "input_file.txt"
     songs = await song_scrounger.find_songs(input_file_path)
 
     # When no relevant artist is found in the input file,
     # Song Scrounger returns multiple matches based purely on song name
-    all_matching_spotify_uris = []
-    for _, spotify_uris in songs.items():
-        all_matching_spotify_uris.extend(list(spotify_uris))
+    all_matching_spotify_uris = [
+        list(spotify_uris)[0]
+        for _, spotify_uris in songs.items()
+        if len(spotify_uris) > 0
+    ]
 
     playlist_name = "My New Playlist Created by Song Scrounger"
     await spotify_client.create_playlist(playlist_name, all_matching_spotify_uris)
