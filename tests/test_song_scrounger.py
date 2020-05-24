@@ -3,22 +3,15 @@ import os
 import random
 import unittest
 
-from collections import namedtuple
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from song_scrounger.song_scrounger import SongScrounger
 from song_scrounger.models.song import Song
 from song_scrounger.util import read_file_contents
-from tests.helper import get_num_times_called
+from tests.helper import get_num_times_called, mock_spotify_artist_factory, mock_spotify_track_factory
 
 
 class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.mock_spotify_artist_factory = namedtuple("MockSpotifyArtist", ['name'])
-        cls.mock_spotify_track_factory = namedtuple(
-            "MockSpotifyTrack", ['name', 'uri', 'artists'])
-
     async def asyncSetUp(self):
         self.mock_spotify_client = AsyncMock()
         self.song_scrounger = SongScrounger(self.mock_spotify_client)
@@ -398,14 +391,14 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
     async def test_search_spotify__returns_song_objects(self):
         song = "Sorry"
         self.mock_spotify_client.find_track.return_value = [
-            self.mock_spotify_track_factory(
+            mock_spotify_track_factory(
                 name="Sorry",
-                artists=[self.mock_spotify_artist_factory(name="Justin Bieber")],
+                artists=[mock_spotify_artist_factory(name="Justin Bieber")],
                 uri="spotify:track:09CtPGIpYB4BrO8qb1RGsF"
             ),
-            self.mock_spotify_track_factory(
+            mock_spotify_track_factory(
                 name="Sorry",
-                artists=[self.mock_spotify_artist_factory(name="Nothing But Thieves")],
+                artists=[mock_spotify_artist_factory(name="Nothing But Thieves")],
                 uri="spotify:track:6rAXHPd18PZ6W8m9EectzH",
             )
         ]
@@ -450,11 +443,11 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
     async def test_search_spotify__multiple_artists_per_song(self):
         song = "bad guy"
         self.mock_spotify_client.find_track.return_value = [
-            self.mock_spotify_track_factory(
+            mock_spotify_track_factory(
                 name="bad guy",
                 artists=[
-                    self.mock_spotify_artist_factory(name="Billie Eilish"),
-                    self.mock_spotify_artist_factory(name="Finneas O'Connell")
+                    mock_spotify_artist_factory(name="Billie Eilish"),
+                    mock_spotify_artist_factory(name="Finneas O'Connell")
                 ],
                 uri="spotify:track:2Fxmhks0bxGSBdJ92vM42m",
             ),
@@ -559,9 +552,9 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
         from tests import helper
         input_file_name = "text_mini.txt"
         self.mock_spotify_client.find_track.return_value = [
-            self.mock_spotify_track_factory(
+            mock_spotify_track_factory(
                 name="American Pie",
-                artists=[self.mock_spotify_artist_factory(name="Don McLean")],
+                artists=[mock_spotify_artist_factory(name="Don McLean")],
                 uri="spotify:track:1fDsrQ23eTAVFElUMaf38X"
             ),
         ]
