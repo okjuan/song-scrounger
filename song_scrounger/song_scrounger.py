@@ -66,7 +66,7 @@ class SongScrounger:
         songs_whose_artists_are_mentioned = set()
         for song in songs:
             for artist in song.artists:
-                if self.is_mentioned(artist, text):
+                if self.is_mentioned(artist, text) or self.is_mentioned_in_parts(artist, text):
                     songs_whose_artists_are_mentioned.add(song)
         return songs_whose_artists_are_mentioned
 
@@ -96,14 +96,26 @@ class SongScrounger:
             text (str): e.g. "Hello dear".
         """
         word, text = word.lower(), text.lower()
-        if text.find(word) != -1:
-            return True
+        return self.is_mentioned_as_full_str(word, text)
 
+    def is_mentioned_in_parts(self, word, text):
+        word, text = word.lower(), text.lower()
         word_tokens = word.split(" ")
         for token in word_tokens:
-            if text.find(token) == -1:
+            if not self.is_mentioned_as_full_str(token, text):
                 return False
         return True
+
+    def is_mentioned_as_full_str(self, word, text):
+        """Returns True iff 'word' occurs in 'text' but not as a substring of another word.
+
+        Case-sensitive. Can be made case-insensitive by lowering args before calling.
+
+        Params:
+            word (str): e.g. "Hello".
+            text (str): e.g. "Hello, how are you?".
+        """
+        return len(re.findall(f"(^|[^a-zA-Z]){word}([^a-zA-Z]|$)", text)) > 0
 
     def _get_paragraphs(self, text):
         "Returns non-empty paragraphs with one or more non-whitespace characters."

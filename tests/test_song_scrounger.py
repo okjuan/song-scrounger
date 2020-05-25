@@ -524,13 +524,70 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(is_mentioned)
 
-    async def test_is_mentioned__tokens_match_but_whole_word_is_not_substr(self):
+    async def test_is_partially_mentioned__tokens_match_separately__counted_as_mention(self):
         # actual example: http://www.dntownsend.com/Site/Rock/3change.htm
         word, text = "Paul Anka", "Paul (\"Put Your Head on My Shoulder\") Anka"
 
-        is_mentioned = self.song_scrounger.is_mentioned(word, text)
+        is_mentioned_in_parts = self.song_scrounger.is_mentioned_in_parts(word, text)
+
+        self.assertTrue(is_mentioned_in_parts)
+
+    # NOTE: Regression Test
+    async def test_is_mentioned_in_parts__token_found_as_substr__not_counted_as_mention(self):
+        # Bug: 'Stones' matched with 'Stone' and 'allen' with 'challenged'
+        word, text = "Allen Stone", "The Rolling Stones challenged the Beatles to a game of foosball"
+
+        is_mentioned_in_parts = self.song_scrounger.is_mentioned_in_parts(word, text)
+
+        self.assertFalse(is_mentioned_in_parts)
+
+    async def test_is_mentioned_as_full_str__mentioned_in_diff_casing__ignores_occurrence(self):
+        word, text = "HELLO", "Hello"
+
+        is_mentioned = self.song_scrounger.is_mentioned_as_full_str(word, text)
+
+        self.assertFalse(is_mentioned)
+
+    async def test_is_mentioned_as_full_str__mentioned_between_spaces__finds_occurrence(self):
+        word, text = "The Rolling Stones", "... The Rolling Stones ..."
+
+        is_mentioned = self.song_scrounger.is_mentioned_as_full_str(word, text)
 
         self.assertTrue(is_mentioned)
+
+    async def test_is_mentioned_as_full_str__mentioned_at_end__finds_occurrence(self):
+        word, text = "The Rolling Stones", "..by The Rolling Stones"
+
+        is_mentioned = self.song_scrounger.is_mentioned_as_full_str(word, text)
+
+        self.assertTrue(is_mentioned)
+
+    async def test_is_mentioned_as_full_str__mentioned_at_beginning__finds_occurrence(self):
+        word, text = "The Rolling Stones", "The Rolling Stones played.."
+
+        is_mentioned = self.song_scrounger.is_mentioned_as_full_str(word, text)
+
+        self.assertTrue(is_mentioned)
+
+    async def test_is_mentioned_as_full_str__mentioned_between_punctuation__finds_occurrence(self):
+        word = "The Rolling Stones"
+        text_period_comma = ".The Rolling Stones,"
+        text_quote_apostrophe = "\"The Rolling Stones's"
+
+        is_mentioned_period_comma = self.song_scrounger.is_mentioned_as_full_str(
+            word, text_period_comma)
+        is_mentioned_quote_apostrophe = self.song_scrounger.is_mentioned_as_full_str(
+            word, text_quote_apostrophe)
+
+        self.assertTrue(is_mentioned_period_comma)
+        self.assertTrue(is_mentioned_quote_apostrophe)
+
+    async def test_is_mentioned_as_full_str__mentioned_as_substr__ignores_occurrence(self):
+        word, text = "allen", "Challenged"
+
+        is_mentioned = self.song_scrounger.is_mentioned_as_full_str(word, text)
+
+        self.assertFalse(is_mentioned)
 
     async def test_is_mentioned__regression(self):
         word, text = 'Don McLean', 'When Don McLean recorded "American Pie"\n'
@@ -538,14 +595,6 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
         is_mentioned = self.song_scrounger.is_mentioned(word, text)
 
         self.assertTrue(is_mentioned)
-
-    @unittest.skip("Enable when implemented")
-    async def test_is_mentioned__whole_word(self):
-        word, text = "Hell", "Hello"
-
-        is_mentioned = self.song_scrounger.is_mentioned(word, text)
-
-        self.assertFalse(is_mentioned)
 
     @unittest.skip("Integration tests disabled by default")
     async def test_find_songs__mocked_spotify_client(self):
