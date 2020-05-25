@@ -14,9 +14,12 @@ class TestSpotifyClient(unittest.IsolatedAsyncioTestCase):
     def setUpClass(cls):
         # TODO: catch exceptions when loading creds fails
         # TODO: selectively skip tests that require a bearer token
-        client_id, secret_key = get_spotify_creds()
-        bearer_token = get_spotify_bearer_token()
-        cls.spotify_client = SpotifyClient(client_id, secret_key, bearer_token)
+        cls.client_id, cls.secret_key = get_spotify_creds()
+        cls.bearer_token = get_spotify_bearer_token()
+
+    async def asyncSetUp(self):
+        self.spotify_client = SpotifyClient(
+            self.client_id, self.secret_key, self.bearer_token)
 
     def _get_inner_client(self, client_ctor):
         return client_ctor.return_value.__aenter__.return_value
@@ -31,6 +34,10 @@ class TestSpotifyClient(unittest.IsolatedAsyncioTestCase):
         )]
         inner_cli = self._get_inner_client(mock_inner_client_ctor)
         inner_cli.search = AsyncMock(return_value=MagicMock(tracks=mock_spotify_tracks))
+        def _get_track_name_without_metadata__ret_vals(track):
+            return track.name
+        self.spotify_client._get_track_name_without_metadata = MagicMock(
+            side_effect=_get_track_name_without_metadata__ret_vals)
 
         results = await self.spotify_client.find_track(track)
 
@@ -52,6 +59,10 @@ class TestSpotifyClient(unittest.IsolatedAsyncioTestCase):
         )]
         inner_cli = self._get_inner_client(mock_inner_client_ctor)
         inner_cli.search = AsyncMock(return_value=MagicMock(tracks=mock_spotify_tracks))
+        def _get_track_name_without_metadata__ret_vals(track):
+            return track.name
+        self.spotify_client._get_track_name_without_metadata = MagicMock(
+            side_effect=_get_track_name_without_metadata__ret_vals)
 
         results = await self.spotify_client.find_track(track)
 
@@ -78,6 +89,10 @@ class TestSpotifyClient(unittest.IsolatedAsyncioTestCase):
         ]
         inner_cli = self._get_inner_client(mock_inner_client_ctor)
         inner_cli.search = AsyncMock(return_value=MagicMock(tracks=mock_spotify_tracks))
+        def _get_track_name_without_metadata__ret_vals(track):
+            return track.name
+        self.spotify_client._get_track_name_without_metadata = MagicMock(
+            side_effect=_get_track_name_without_metadata__ret_vals)
 
         results = await self.spotify_client.find_track(track)
 
@@ -92,6 +107,22 @@ class TestSpotifyClient(unittest.IsolatedAsyncioTestCase):
 
         with self.assertRaises(ValueError):
             results = await self.spotify_client.find_track(track)
+
+    async def test_get_track_name_without_metadata__name_contains_metadata__removes_metadata(self):
+        track = mock_spotify_track_factory(
+            "Satisfaction - Mono Version", "Mock URI", ["Mock Artists"])
+
+        cleaned_track_name = self.spotify_client._get_track_name_without_metadata(track)
+
+        self.assertEqual(cleaned_track_name, "Satisfaction")
+
+    async def test_get_track_name_without_metadata__name_does_not_contain_metadata__returns_original(self):
+        track = mock_spotify_track_factory(
+            "   Satisfaction ", "Mock URI", ["Mock Artists"])
+
+        cleaned_track_name = self.spotify_client._get_track_name_without_metadata(track)
+
+        self.assertEqual(cleaned_track_name, "   Satisfaction ")
 
     @unittest.skip("Integration tests disabled by default.")
     async def test_create_playlist(self):
