@@ -26,8 +26,7 @@ class SongScrounger:
                 paragraphs containing song names & perhaps some of their artists.
 
         Returns:
-            (dict): key (str) is song name; val (set(str)) is spotify URIs
-                of matching songs, empty if no matching artist mentioned.
+            (dict): key (str) is song name; val (set(Song)) of matching songs.
         """
         text = read_file_contents(input_file_path)
         results = defaultdict(set)
@@ -38,9 +37,16 @@ class SongScrounger:
                 songs = await self.search_spotify(song_name)
                 songs = self.filter_if_any_artists_mentioned(songs, text)
                 songs = self.reduce_by_popularity_per_artist(songs)
-                spotify_uris = set([song.spotify_uri for song in songs])
-                results[song_name] |= spotify_uris
+                results[song_name] = self.set_union(results[song_name], songs)
         return results
+
+    def set_union(self, song_set_A, song_set_B):
+        spotify_uris_seen_already, union = set(), set()
+        for song in song_set_A | song_set_B:
+            if song.spotify_uri not in spotify_uris_seen_already:
+                union.add(song)
+                spotify_uris_seen_already.add(song.spotify_uri)
+        return union
 
     def filter_if_any_artists_mentioned(self, songs, text):
         """
