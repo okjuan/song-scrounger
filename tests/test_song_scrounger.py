@@ -99,7 +99,7 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(tokens[1], "repeat token")
         self.assertEqual(tokens[2], "repeat token")
 
-    async def test_find_songs_names__strips_whitespace(self):
+    async def test_find_song_names__strips_whitespace(self):
         text = MagicMock()
         self.song_scrounger.find_quoted_tokens = MagicMock(return_value = [
             "  leading",
@@ -113,7 +113,7 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(song_names_list), 3)
         self.assertEqual(set(song_names_list), set(["leading", "trailing", "both"]))
 
-    async def test_find_songs_names__strips_trailing_punctuation(self):
+    async def test_find_song_names__strips_trailing_punctuation(self):
         text = MagicMock()
         self.song_scrounger.find_quoted_tokens = MagicMock(return_value = [
             ",leading",
@@ -588,13 +588,6 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
         is_mentioned = self.song_scrounger.is_mentioned_as_full_str(word, text)
 
         self.assertFalse(is_mentioned)
-
-    async def test_is_mentioned__regression(self):
-        word, text = 'Don McLean', 'When Don McLean recorded "American Pie"\n'
-
-        is_mentioned = self.song_scrounger.is_mentioned(word, text)
-
-        self.assertTrue(is_mentioned)
 
     @unittest.skip("Integration tests disabled by default")
     async def test_find_songs__mocked_spotify_client(self):
