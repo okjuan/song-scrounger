@@ -128,7 +128,7 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(set(song_names_list), set([",leading", "trailing", ".both"]))
 
     @patch("song_scrounger.song_scrounger.read_file_contents", return_value="\"Sorry\" by Justin Bieber.")
-    async def test_find_songs__returns_only_filtered_songs(self, mock_read_file_contents):
+    async def test_find_songs__single_song_with_matching_artist__returns_that_version_only(self, mock_read_file_contents):
         input_file_name = "mock input file"
         text = "\"Sorry\" by Justin Bieber."
         songs = [
@@ -153,8 +153,9 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
             return_value = songs
         )
         self.song_scrounger.filter_if_any_artists_mentioned = MagicMock(
-            return_value = set([songs[0]])
-        )
+            return_value = set([songs[0]]))
+        self.song_scrounger.reduce_by_popularity_per_artist = MagicMock(
+            return_value = set([songs[0]]))
 
         results = await self.song_scrounger.find_songs(input_file_name)
 
@@ -163,15 +164,16 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
         self.song_scrounger.find_song_names.assert_called_once_with(text)
         self.song_scrounger.search_spotify.assert_called_once_with("Sorry")
         self.song_scrounger.filter_if_any_artists_mentioned.assert_any_call(
-            songs, text
-        )
+            songs, text)
+        self.song_scrounger.reduce_by_popularity_per_artist.assert_called_once_with(
+            set([songs[0]]))
         self.assertEqual(len(results.keys()), 1)
         self.assertTrue("Sorry" in results.keys())
         self.assertEqual(len(results["Sorry"]), 1)
         self.assertEqual(results["Sorry"], set(["spotify:track:09CtPGIpYB4BrO8qb1RGsF"]))
 
     @patch("song_scrounger.song_scrounger.read_file_contents", return_value="\"Sorry\" by Justin Bieber... as I said, \"Sorry\"...")
-    async def test_find_songs__duplicate_finds__returns_only_one(self, mock_read_file_contents):
+    async def test_find_songs__same_song_mentioned_twice__returns_only_one_copy(self, mock_read_file_contents):
         input_file_name = "mock input file"
         text = "\"Sorry\" by Justin Bieber... as I said, \"Sorry\"..."
         self.song_scrounger._get_paragraphs = MagicMock(
@@ -191,8 +193,9 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
             return_value = songs
         )
         self.song_scrounger.filter_if_any_artists_mentioned = MagicMock(
-            return_value = set(songs)
-        )
+            return_value = set(songs))
+        self.song_scrounger.reduce_by_popularity_per_artist = MagicMock(
+            return_value = set(songs))
 
         results = await self.song_scrounger.find_songs(input_file_name)
 
@@ -203,17 +206,20 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             get_num_times_called(self.song_scrounger.search_spotify), 2)
         self.song_scrounger.filter_if_any_artists_mentioned.assert_any_call(
-            songs, text
-        )
+            songs, text)
         self.assertEqual(get_num_times_called(
             self.song_scrounger.filter_if_any_artists_mentioned), 2)
+        self.song_scrounger.reduce_by_popularity_per_artist.assert_any_call(
+            set(songs))
+        self.assertEqual(
+            get_num_times_called(self.song_scrounger.reduce_by_popularity_per_artist), 2)
         self.assertEqual(len(results.keys()), 1)
         self.assertTrue("Sorry" in results.keys())
         self.assertEqual(len(results["Sorry"]), 1)
         self.assertEqual(results["Sorry"], set(["spotify:track:09CtPGIpYB4BrO8qb1RGsF"]))
 
     @patch("song_scrounger.song_scrounger.read_file_contents", return_value="\"Sorry\" by Justin Bieber...\n\"Sorry\" by Nothing But Thieves")
-    async def test_find_songs__multiple_finds_w_different_artists__merges_results(self, mock_read_file_contents):
+    async def test_find_songs__homonym_songs_w_different_artists__returns_both_versions(self, mock_read_file_contents):
         input_file_name = "mock input file"
         text = "\"Sorry\" by Justin Bieber...\n\"Sorry\" by Nothing But Thieves"
         self.song_scrounger._get_paragraphs = MagicMock(return_value=[
@@ -237,8 +243,9 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
             return_value = songs
         )
         self.song_scrounger.filter_if_any_artists_mentioned = MagicMock(
-            return_value = set(songs)
-        )
+            return_value = set(songs))
+        self.song_scrounger.reduce_by_popularity_per_artist = MagicMock(
+            return_value = set(songs))
 
         results = await self.song_scrounger.find_songs(input_file_name)
 
@@ -256,10 +263,11 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             get_num_times_called(self.song_scrounger.search_spotify), 2)
         self.song_scrounger.filter_if_any_artists_mentioned.assert_any_call(
-            songs, text
-        )
+            songs, text)
         self.assertEqual(get_num_times_called(
             self.song_scrounger.filter_if_any_artists_mentioned), 2)
+        self.song_scrounger.reduce_by_popularity_per_artist = MagicMock(
+            return_value = set(songs))
         self.assertEqual(len(results.keys()), 1)
         self.assertTrue("Sorry" in results.keys())
         self.assertEqual(len(results["Sorry"]), 2)
@@ -269,6 +277,54 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
                 "spotify:track:09CtPGIpYB4BrO8qb1RGsF",
                 "spotify:track:6rAXHPd18PZ6W8m9EectzH"
             ])
+        )
+
+    @patch("song_scrounger.song_scrounger.read_file_contents", return_value="\"American Pie\" by Don McLean")
+    async def test_find_songs__multiple_search_results_w_same_artist__returns_only_one(self, mock_read_file_contents):
+        input_file_name = "mock input file"
+        text = "\"American Pie\" by Don McLean"
+        self.song_scrounger._get_paragraphs = MagicMock(return_value=[text])
+        self.song_scrounger.find_song_names = MagicMock(
+            return_value = ["American Pie"]
+        )
+        less_popular_version = Song(
+            "American Pie",
+            "spotify:track:1fDsrQ23eTAVFElUMaf38X",
+            ["Don McLean"],
+            popularity=1
+        )
+        more_popular_version = Song(
+            "American Pie",
+            "spotify:track:2ZbTw8awL7EFat9Wz1DIHN",
+            ["Don McLean"],
+            popularity=2
+        )
+        songs = [less_popular_version, more_popular_version]
+        self.song_scrounger.search_spotify = AsyncMock(
+            return_value = songs)
+        self.song_scrounger.filter_if_any_artists_mentioned = MagicMock(
+            return_value = set(songs))
+        self.song_scrounger.reduce_by_popularity_per_artist = MagicMock(
+            return_value = set([more_popular_version]))
+
+        results = await self.song_scrounger.find_songs(input_file_name)
+
+        mock_read_file_contents.assert_called_once_with(input_file_name)
+        self.song_scrounger._get_paragraphs.assert_called_once_with(text)
+        self.song_scrounger.find_song_names.assert_called_once_with(
+            "\"American Pie\" by Don McLean")
+        self.song_scrounger.search_spotify.assert_called_once_with(
+            "American Pie")
+        self.song_scrounger.filter_if_any_artists_mentioned.assert_called_once_with(
+            songs, text)
+        self.song_scrounger.reduce_by_popularity_per_artist = MagicMock(
+            return_value = set(songs))
+        self.assertEqual(len(results.keys()), 1)
+        self.assertTrue("American Pie" in results.keys())
+        self.assertEqual(len(results["American Pie"]), 1)
+        self.assertEqual(
+            results["American Pie"],
+            set(["spotify:track:2ZbTw8awL7EFat9Wz1DIHN"])
         )
 
     async def test_filter_if_any_artists_mentioned__only_keeps_mentioned_artist(self):
@@ -394,12 +450,14 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
             mock_spotify_track_factory(
                 name="Sorry",
                 artists=[mock_spotify_artist_factory(name="Justin Bieber")],
-                uri="spotify:track:09CtPGIpYB4BrO8qb1RGsF"
+                uri="spotify:track:09CtPGIpYB4BrO8qb1RGsF",
+                popularity=None
             ),
             mock_spotify_track_factory(
                 name="Sorry",
                 artists=[mock_spotify_artist_factory(name="Nothing But Thieves")],
                 uri="spotify:track:6rAXHPd18PZ6W8m9EectzH",
+                popularity=None
             )
         ]
         expected_songs = [
@@ -450,6 +508,7 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
                     mock_spotify_artist_factory(name="Finneas O'Connell")
                 ],
                 uri="spotify:track:2Fxmhks0bxGSBdJ92vM42m",
+                popularity=None
             ),
         ]
         expected_songs = [Song(
@@ -467,6 +526,120 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(songs_list[0].name, expected_songs[0].name)
         self.assertEqual(songs_list[0].spotify_uri, expected_songs[0].spotify_uri)
         self.assertEqual(songs_list[0].artists, expected_songs[0].artists)
+
+    async def test_reduce_by_popularity_per_artist__by_same_artist__reduces_to_one(self):
+        songs = [
+            Song(
+                "American Pie",
+                "spotify:track:1fDsrQ23eTAVFElUMaf38X",
+                ["Don McLean"]
+            ),
+            Song(
+                "American Pie",
+                "spotify:track:4wpuHehFEEpWAlkw3vjH0s",
+                ["Don McLean"]
+            )
+        ]
+        self.song_scrounger.pick_most_popular_song = MagicMock(
+            return_value = songs[0])
+
+        results = self.song_scrounger.reduce_by_popularity_per_artist(songs)
+
+        self.song_scrounger.pick_most_popular_song.assert_called_once_with(set(songs))
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results, set([songs[0]]))
+
+    async def test_reduce_by_popularity_per_artist__by_diff_artists__does_not_reduce(self):
+        song_by_artist1 = Song(
+            "American Pie",
+            "spotify:track:1fDsrQ23eTAVFElUMaf38X",
+            ["Don McLean"]
+        )
+        song_by_artist2 = Song(
+            "American Pie",
+            "spotify:track:1vo6TY0FyLRBTXohxvflhJ",
+            ["Madonna"]
+        )
+        songs = [song_by_artist1, song_by_artist2]
+        def pick_most_popular_song__ret_vals(songs):
+            songs = list(songs)
+            if "Don McLean" in songs[0].artists[0]:
+                return song_by_artist1
+            elif "Madonna" in songs[0].artists[0]:
+                return song_by_artist2
+            else:
+                raise ValueError(f"Mock did not expect arg: {songs}")
+        self.song_scrounger.pick_most_popular_song = MagicMock(
+            side_effect = pick_most_popular_song__ret_vals)
+
+        results = self.song_scrounger.reduce_by_popularity_per_artist(songs)
+
+        self.song_scrounger.pick_most_popular_song.assert_any_call(set([song_by_artist1]))
+        self.song_scrounger.pick_most_popular_song.assert_any_call(set([song_by_artist2]))
+        self.assertEqual(
+            get_num_times_called(self.song_scrounger.pick_most_popular_song), 2)
+        self.assertEqual(len(results), 2)
+        self.assertTrue(song_by_artist1 in results)
+        self.assertTrue(song_by_artist2 in results)
+
+    async def test_pick_most_popular_song__two_songs_w_diff_popularity__picks_most_popular(self):
+        less_popular_song = Song(
+            "some song",
+            "some spotify uri",
+            ["some artist"],
+            popularity=1
+        )
+        more_popular_song = Song(
+            "mock name of more popular version",
+            "mock spotify uri of more popular version",
+            ["mock artist of more popular version"],
+            popularity=2
+        )
+        mock_songs = [less_popular_song, more_popular_song]
+
+        result = self.song_scrounger.pick_most_popular_song(mock_songs)
+
+        self.assertEqual(result, more_popular_song)
+
+    async def test_pick_most_popular_song__multiple_songs_w_diff_popularity__picks_most_popular(self):
+        less_popular_song = Song(
+            "some song", "some spotify uri", ["some artist"], popularity=1)
+        another_less_popular_song = Song(
+            "some song", "some spotify uri", ["some artist"], popularity=25)
+        yet_another_less_popular_song = Song(
+            "some song", "some spotify uri", ["some artist"], popularity=50)
+        more_popular_song = Song(
+            "mock name of more popular version",
+            "mock spotify uri of more popular version",
+            ["mock artist of more popular version"],
+            popularity=100
+        )
+        mock_songs = [
+            less_popular_song,
+            another_less_popular_song,
+            yet_another_less_popular_song,
+            more_popular_song
+        ]
+
+        result = self.song_scrounger.pick_most_popular_song(mock_songs)
+
+        self.assertEqual(result, more_popular_song)
+
+    async def test_pick_most_popular_song__only_one_song__defaults_to_that_song(self):
+        some_song = Song(
+            "mock song", "mock spotify uri", ["mock artist"], popularity=1)
+
+        result = self.song_scrounger.pick_most_popular_song([some_song])
+
+        self.assertEqual(result, some_song)
+
+    async def test_pick_most_popular_song__compares_undefined_popularity__raises(self):
+        song_w_undefined_popularity = Song(
+            "mock song", "mock spotify uri", ["mock artist"], popularity=None)
+
+        with self.assertRaises(ValueError):
+            result = self.song_scrounger.pick_most_popular_song([
+                song_w_undefined_popularity, song_w_undefined_popularity])
 
     async def test_get_paragraphs__no_newlines(self):
         text = "Only paragraph"
@@ -597,7 +770,8 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
             mock_spotify_track_factory(
                 name="American Pie",
                 artists=[mock_spotify_artist_factory(name="Don McLean")],
-                uri="spotify:track:1fDsrQ23eTAVFElUMaf38X"
+                uri="spotify:track:1fDsrQ23eTAVFElUMaf38X",
+                popularity=None
             ),
         ]
 

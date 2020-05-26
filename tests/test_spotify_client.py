@@ -30,7 +30,8 @@ class TestSpotifyClient(unittest.IsolatedAsyncioTestCase):
         mock_spotify_tracks = [mock_spotify_track_factory(
             "Mock Track",
             "Mock URI",
-            [mock_spotify_artist_factory("Mock Artist")]
+            [mock_spotify_artist_factory("Mock Artist")],
+            popularity=None
         )]
         inner_cli = self._get_inner_client(mock_inner_client_ctor)
         inner_cli.search = AsyncMock(return_value=MagicMock(tracks=mock_spotify_tracks))
@@ -55,7 +56,8 @@ class TestSpotifyClient(unittest.IsolatedAsyncioTestCase):
         mock_spotify_tracks = [mock_spotify_track_factory(
             "Mock Track Partial Match",
             "Mock URI",
-            [mock_spotify_artist_factory("Mock Artist")]
+            [mock_spotify_artist_factory("Mock Artist")],
+            popularity=None
         )]
         inner_cli = self._get_inner_client(mock_inner_client_ctor)
         inner_cli.search = AsyncMock(return_value=MagicMock(tracks=mock_spotify_tracks))
@@ -79,12 +81,14 @@ class TestSpotifyClient(unittest.IsolatedAsyncioTestCase):
             mock_spotify_track_factory(
                 "Mock Track Exact Match",
                 "Mock URI",
-                [mock_spotify_artist_factory("Mock Artist")]
+                [mock_spotify_artist_factory("Mock Artist")],
+                popularity=None
             ),
             mock_spotify_track_factory(
                 "Mock Track Partial Match",
                 "Mock URI",
-                [mock_spotify_artist_factory("Mock Artist")]
+                [mock_spotify_artist_factory("Mock Artist")],
+                popularity=None
             )
         ]
         inner_cli = self._get_inner_client(mock_inner_client_ctor)
@@ -110,7 +114,11 @@ class TestSpotifyClient(unittest.IsolatedAsyncioTestCase):
 
     async def test_get_track_name_without_metadata__name_contains_metadata__removes_metadata(self):
         track = mock_spotify_track_factory(
-            "Satisfaction - Mono Version", "Mock URI", ["Mock Artists"])
+            "Satisfaction - Mono Version",
+            "Mock URI",
+            ["Mock Artists"],
+            popularity=None
+        )
 
         cleaned_track_name = self.spotify_client._get_track_name_without_metadata(track)
 
@@ -118,7 +126,11 @@ class TestSpotifyClient(unittest.IsolatedAsyncioTestCase):
 
     async def test_get_track_name_without_metadata__name_does_not_contain_metadata__returns_original(self):
         track = mock_spotify_track_factory(
-            "   Satisfaction ", "Mock URI", ["Mock Artists"])
+            "   Satisfaction ",
+            "Mock URI",
+            ["Mock Artists"],
+            popularity=None
+        )
 
         cleaned_track_name = self.spotify_client._get_track_name_without_metadata(track)
 

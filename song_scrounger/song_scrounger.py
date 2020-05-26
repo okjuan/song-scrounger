@@ -3,6 +3,7 @@ import re
 import sys
 
 from collections import defaultdict
+from functools import reduce
 
 from .models.song import Song
 from .spotify_client import SpotifyClient
@@ -35,8 +36,9 @@ class SongScrounger:
             song_names = self.find_song_names(paragraph)
             for song_name in song_names:
                 songs = await self.search_spotify(song_name)
-                filtered_songs = self.filter_if_any_artists_mentioned(songs, text)
-                spotify_uris = set([song.spotify_uri for song in filtered_songs])
+                songs = self.filter_if_any_artists_mentioned(songs, text)
+                songs = self.reduce_by_popularity_per_artist(songs)
+                spotify_uris = set([song.spotify_uri for song in songs])
                 results[song_name] |= spotify_uris
         return results
 
@@ -83,10 +85,30 @@ class SongScrounger:
             Song(
                 track.name,
                 track.uri,
-                [artist.name for artist in track.artists]
+                [artist.name for artist in track.artists],
+                track.popularity
             )
             for track in tracks
         }
+
+    def reduce_by_popularity_per_artist(self, songs):
+        cache_key_from_artists = lambda artists: "-".join(artists)
+        by_same_artist = defaultdict(set)
+        for song in songs:
+            by_same_artist[cache_key_from_artists(song.artists)].add(song)
+        return set([
+            self.pick_most_popular_song(songs_grouped_by_artist)
+            for _, songs_grouped_by_artist in by_same_artist.items()
+        ])
+
+    def pick_most_popular_song(self, songs):
+        def pick_more_popular_song(song1, song2):
+            if song1.popularity is None:
+                raise ValueError(song1)
+            elif song2.popularity is None:
+                raise ValueError(song2)
+            return song1 if song1.popularity >= song2.popularity else song2
+        return reduce(pick_more_popular_song, songs)
 
     def is_mentioned(self, word, text):
         """True iff text contains word, ignoring case.
