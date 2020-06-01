@@ -935,6 +935,70 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(song.artists), 1)
         self.assertEqual(song.artists, ["Kiefer"])
 
+    @unittest.skip("Skip integration tests by default")
+    async def test_find_songs__real_world_input_example(self):
+        input_file_name = "history_rock_n_roll_ch4_snippet.txt"
+        expected_songs = [
+            "Heartbreaker", "Satisfaction", "(I Can't Get No) Satisfaction",
+            "Doo Doo Doo Doo Doo (Heartbreaker)", "Time is On My Side",
+            "Livin' Doll", "Halfway to Paradise", "Rock with the Caveman",
+            "Rock Island Line", "Doo Doo Doo Doo Doo",
+            """Why don't we put that doo-doo stuff in the title
+            so the kids will know which one they're buying?"""
+        ].sort()
+
+
+        results = await self._run_find_songs_test(input_file_name)
+
+
+        self.assertEqual(len(results.keys()), 11)
+        self.assertEqual(list(results.keys()).sort(), expected_songs)
+
+        # PROB: Grand Funk Railroad not detected bc it is mentioned as 'Grank Funk'
+        self.assertEqual(len(results["Heartbreaker"]), 1)
+        self.assertIn("Led Zeppelin", list(results["Heartbreaker"])[0].artists)
+
+        # PROB: Why is there only one hit here, by [ocean jams]? They're not mentioned...
+        # (It's ok that it's not detected as a Rolling Stones song)
+        self.assertEqual(len(results["Satisfaction"]), 1)
+
+        self.assertEqual(len(results["(I Can't Get No) Satisfaction"]), 1)
+        self.assertIn(
+            "The Rolling Stones",
+            list(results["(I Can't Get No) Satisfaction"])[0].artists
+        )
+
+        self.assertEqual(len(results["Time is On My Side"]), 1)
+        self.assertIn(
+            "The Rolling Stones",
+            list(results["Time is On My Side"])[0].artists
+        )
+
+        self.assertEqual(len(results["Halfway to Paradise"]), 1)
+        self.assertIn(
+            "Billy Fury",
+            list(results["Halfway to Paradise"])[0].artists
+        )
+
+        self.assertEqual(len(results["Rock with the Caveman"]), 1)
+        self.assertIn(
+            "Tommy Steele",
+            list(results["Rock with the Caveman"])[0].artists
+        )
+
+        # PROB: Lonnie Donegan is not matched with Lonnie Donegan & His Skiffle Group
+        self.assertEqual(len(results["Rock Island Line"]), 11)
+
+        # PROB: Spotify has the song as "Living Doll"
+        self.assertEqual(len(results["Livin' Doll"]), 0)
+
+        self.assertEqual(len(results["Doo Doo Doo Doo Doo"]), 0)
+        self.assertEqual(
+            len(results["""Why don't we put that doo-doo stuff in the title
+                so the kids will know which one they're buying?"""]),
+            0
+        )
+
     async def _run_find_songs_test(self, input_file_name):
         from song_scrounger.spotify_client import SpotifyClient
         from song_scrounger.util import get_spotify_creds, get_spotify_bearer_token
