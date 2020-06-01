@@ -110,9 +110,9 @@ class SongScrounger:
     def pick_most_popular_song(self, songs):
         def pick_more_popular_song(song1, song2):
             if song1.popularity is None:
-                raise ValueError(song1)
+                raise ValueError(f"{song1.name}'s popularity is None")
             elif song2.popularity is None:
-                raise ValueError(song2)
+                raise ValueError(f"{song2.name}'s popularity is None")
             return song1 if song1.popularity >= song2.popularity else song2
         return reduce(pick_more_popular_song, songs)
 

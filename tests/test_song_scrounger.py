@@ -875,6 +875,38 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
             list(results["Satisfaction"])[0].artists + list(results["Satisfaction"])[1].artists
         )
 
+    @patch("song_scrounger.song_scrounger.read_file_contents", return_value="\"Mock Song Name\"")
+    async def test_find_songs__song_dups_same_artist__returns_most_popular_version_only(
+        self, mock_read_file_contents):
+        self.mock_spotify_client.find_track.return_value = [
+            mock_spotify_track_factory(
+                name="Mock Song Name",
+                artists=[mock_spotify_artist_factory(name="MOCKARTIST")],
+                uri="spotify:track:mock1",
+                popularity=1
+            ),
+            mock_spotify_track_factory(
+                name="Mock Song Name",
+                artists=[mock_spotify_artist_factory(name="MOCKARTIST")],
+                uri="spotify:track:mock2",
+                popularity=50
+            ),
+            mock_spotify_track_factory(
+                name="Mock Song Name",
+                artists=[mock_spotify_artist_factory(name="MOCKARTIST")],
+                uri="spotify:track:mock3",
+                popularity=100
+            )
+        ]
+
+        results = await self.song_scrounger.find_songs("mock file path")
+
+        mock_read_file_contents.assert_called_once_with("mock file path")
+        self.mock_spotify_client.find_track.assert_any_call("Mock Song Name")
+        self.assertEqual(len(results.keys()), 1)
+        self.assertEqual(len(results["Mock Song Name"]), 1)
+
+
     @unittest.skip("Integration tests disabled by default")
     async def test_find_songs__song_w_single_artist(self):
         input_file_name = "single_artist_mentioned.txt"
