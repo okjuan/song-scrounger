@@ -840,6 +840,41 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
             set(["spotify:track:2jaN6NgXflZTj2z9CWcqaP"]))
         self.assertIn("The Rolling Stones", list(results["Time Is On My Side"])[0].artists)
 
+    # NOTE: 'Allen' is a substr of 'challenges', and 'Stone' of 'stoned'
+    @patch("song_scrounger.song_scrounger.read_file_contents", return_value="The song \"Satisfaction\" challenges stoned hippies")
+    async def test_find_songs__artist_name_appears_as_substr_only__artist_not_matched(
+        self, mock_read_file_contents):
+        # NOTE: its important that the spotify URIs don't match
+        self.mock_spotify_client.find_track.return_value = [
+            mock_spotify_track_factory(
+                name="Satisfaction",
+                artists=[mock_spotify_artist_factory(name="MOCKARTIST")],
+                uri="spotify:track:mock1",
+                popularity=None
+            ),
+            mock_spotify_track_factory(
+                name="Satisfaction",
+                artists=[mock_spotify_artist_factory(name="Allen Stone")],
+                uri="spotify:track:mock2",
+                popularity=None
+            ),
+        ]
+
+        results = await self.song_scrounger.find_songs("mock file path")
+
+        mock_read_file_contents.assert_called_once_with("mock file path")
+        self.mock_spotify_client.find_track.assert_any_call("Satisfaction")
+        self.assertEqual(len(results.keys()), 1)
+        self.assertEqual(len(results["Satisfaction"]), 2)
+        self.assertIn(
+            "MOCKARTIST",
+            list(results["Satisfaction"])[0].artists + list(results["Satisfaction"])[1].artists
+        )
+        self.assertIn(
+            "Allen Stone",
+            list(results["Satisfaction"])[0].artists + list(results["Satisfaction"])[1].artists
+        )
+
     @unittest.skip("Integration tests disabled by default")
     async def test_find_songs__song_w_single_artist(self):
         input_file_name = "single_artist_mentioned.txt"
