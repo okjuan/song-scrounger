@@ -790,7 +790,6 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
     @unittest.skip("Integration tests disabled by default")
     async def test_find_songs__mocked_spotify_client__song_w_single_artist(self):
         from tests import helper
-        input_file_name = "text_mini.txt"
         self.mock_spotify_client.find_track.return_value = [
             mock_spotify_track_factory(
                 name="American Pie",
@@ -799,8 +798,8 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
                 popularity=None
             ),
         ]
-
         input_file_path = helper.get_path_to_test_input_file("single_artist_mentioned.txt")
+
         results = await self.song_scrounger.find_songs(input_file_path)
 
         self.mock_spotify_client.find_track.assert_any_call("American Pie")
@@ -813,18 +812,9 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
 
     @unittest.skip("Integration tests disabled by default")
     async def test_find_songs__song_w_single_artist(self):
-        from song_scrounger.spotify_client import SpotifyClient
-        from song_scrounger.util import get_spotify_creds, get_spotify_bearer_token
-        from tests import helper
+        input_file_name = "single_artist_mentioned.txt"
 
-        spotify_client_id, spotify_secret_key = get_spotify_creds()
-        spotify_bearer_token = get_spotify_bearer_token()
-        spotify_client = SpotifyClient(spotify_client_id, spotify_secret_key, spotify_bearer_token)
-
-        song_scrounger = SongScrounger(spotify_client)
-
-        input_file_path = helper.get_path_to_test_input_file("single_artist_mentioned.txt")
-        results = await song_scrounger.find_songs(input_file_path)
+        results = await self._run_find_songs_test(input_file_name)
 
         self.assertEqual(1, len(results.keys()))
         self.assertIn("American Pie", results.keys())
@@ -836,18 +826,9 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
 
     @unittest.skip("Integration tests disabled by default")
     async def test_find_songs__two_artists_one_song(self):
-        from song_scrounger.spotify_client import SpotifyClient
-        from song_scrounger.util import get_spotify_creds, get_spotify_bearer_token
-        from tests import helper
+        input_file_name = "two_artists_mentioned.txt"
 
-        spotify_client_id, spotify_secret_key = get_spotify_creds()
-        spotify_bearer_token = get_spotify_bearer_token()
-        spotify_client = SpotifyClient(spotify_client_id, spotify_secret_key, spotify_bearer_token)
-
-        song_scrounger = SongScrounger(spotify_client)
-
-        input_file_path = helper.get_path_to_test_input_file("two_artists_mentioned.txt")
-        results = await song_scrounger.find_songs(input_file_path)
+        results = await self._run_find_songs_test(input_file_name)
 
         self.assertEqual(1, len(results.keys()))
         self.assertIn("American Pie", results.keys())
@@ -862,18 +843,9 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
 
     @unittest.skip("Integration tests disabled by default")
     async def test_find_songs__no_artists_filtered__multiple_results_without_duplicate_artists(self):
-        from song_scrounger.spotify_client import SpotifyClient
-        from song_scrounger.util import get_spotify_creds, get_spotify_bearer_token
-        from tests import helper
+        input_file_name = "no_artists_mentioned.txt"
 
-        spotify_client_id, spotify_secret_key = get_spotify_creds()
-        spotify_bearer_token = get_spotify_bearer_token()
-        spotify_client = SpotifyClient(spotify_client_id, spotify_secret_key, spotify_bearer_token)
-
-        song_scrounger = SongScrounger(spotify_client)
-
-        input_file_path = helper.get_path_to_test_input_file("no_artists_mentioned.txt")
-        results = await song_scrounger.find_songs(input_file_path)
+        results = await self._run_find_songs_test(input_file_name)
 
         self.assertEqual(1, len(results.keys()))
         self.assertIn("American Pie", results.keys())
@@ -885,31 +857,85 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
         self.assertGreater(len(results["American Pie"]), 10)
 
     @unittest.skip("Skip integration tests by default")
-    async def test_end_to_end__for_duplicate_songs(self):
+    async def test_find_songs__for_duplicate_songs(self):
         input_file_name = "test_duplicate_songs.txt"
-        playlist_name = "Duplicate Song Test: should not repeat any artist"
-        await self._run_end_to_end_test(input_file_name, playlist_name)
+
+        results = await self._run_find_songs_test(input_file_name)
+
+        self.assertEqual(len(results.keys()), 1)
+        self.assertTrue("Sorry" in results.keys())
+        self.assertGreater(len(results["Sorry"]), 1)
+        self.assertIsNotNone(list(results["Sorry"])[0])
+        self.assertEqual(list(results["Sorry"])[0].name, "Sorry")
+        self.assertIn("spotify:track:", list(results["Sorry"])[0].spotify_uri)
+        self.assertGreaterEqual(len(list(results["Sorry"])[0].artists), 1)
 
     @unittest.skip("Skip integration tests by default")
-    async def test_end_to_end__simple_artist_detection(self):
+    async def test_find_songs__simple_artist_detection(self):
         input_file_name = "test_simple_artist_detection.txt"
-        playlist_name = "Simple Artist Detection Song: Nothing But Thieves"
-        await self._run_end_to_end_test(input_file_name, playlist_name)
+
+        results = await self._run_find_songs_test(input_file_name)
+
+        self.assertEqual(len(results.keys()), 1)
+        self.assertTrue("Sorry" in results.keys())
+        self.assertEqual(len(results["Sorry"]), 1)
+        song = list(results["Sorry"])[0]
+        self.assertIsNotNone(song)
+        self.assertEqual(song.name, "Sorry")
+        self.assertEqual(song.spotify_uri, "spotify:track:6rAXHPd18PZ6W8m9EectzH")
+        self.assertEqual(len(song.artists), 1)
+        self.assertEqual(song.artists, ["Nothing But Thieves"])
 
     @unittest.skip("Skip integration tests by default")
-    async def test_end_to_end__multi_paragraph_artist_detection(self):
+    async def test_find_songs__multi_paragraph_artist_detection(self):
         input_file_name = "test_multiparagraph_artist_detection.txt"
-        playlist_name = "Multi-Paragraph Artist Detection Song: JB and Nothing But Thieves"
-        await self._run_end_to_end_test(input_file_name, playlist_name)
-        "test_multiparagraph_artist_detection.txt"
+
+        results = await self._run_find_songs_test(input_file_name)
+
+        self.assertEqual(len(results.keys()), 1)
+        self.assertTrue("Sorry" in results.keys())
+        self.assertEqual(len(results["Sorry"]), 2)
+        song_list = list(results["Sorry"])
+        self.assertIsNotNone(song_list[0])
+        self.assertIsNotNone(song_list[1])
+        self.assertEqual(song_list[0].name, "Sorry")
+        self.assertEqual(song_list[1].name, "Sorry")
+        self.assertIn(
+            "spotify:track:6rAXHPd18PZ6W8m9EectzH",
+            [song_list[0].spotify_uri, song_list[1].spotify_uri]
+        )
+        self.assertIn(
+            "spotify:track:09CtPGIpYB4BrO8qb1RGsF",
+            [song_list[0].spotify_uri, song_list[1].spotify_uri]
+        )
+        self.assertEqual(len(song_list[0].artists), 1)
+        self.assertEqual(len(song_list[1].artists), 1)
+        self.assertIn(
+            "Nothing But Thieves",
+            [song_list[0].artists[0], song_list[1].artists[0]]
+        )
+        self.assertIn(
+            "Justin Bieber",
+            [song_list[0].artists[0], song_list[1].artists[0]]
+        )
 
     @unittest.skip("Skip integration tests by default")
-    async def test_end_to_end__cross_paragraph_artist_detection(self):
+    async def test_find_songs__cross_paragraph_artist_detection(self):
         input_file_name = "test_cross_paragraph_artist_detection.txt"
-        playlist_name = "Cross-Paragraph Artist Detection Song: Kiefer"
-        await self._run_end_to_end_test(input_file_name, playlist_name)
 
-    async def _run_end_to_end_test(self, input_file_name, playlist_name):
+        results = await self._run_find_songs_test(input_file_name)
+
+        self.assertEqual(len(results.keys()), 1)
+        self.assertTrue("Socially Awkward" in results.keys())
+        self.assertEqual(len(results["Socially Awkward"]), 1)
+        song = list(results["Socially Awkward"])[0]
+        self.assertIsNotNone(song)
+        self.assertEqual(song.name, "Socially Awkward")
+        self.assertEqual(song.spotify_uri, "spotify:track:2yE3omg2KMRfFw4ukBlDIJ")
+        self.assertEqual(len(song.artists), 1)
+        self.assertEqual(song.artists, ["Kiefer"])
+
+    async def _run_find_songs_test(self, input_file_name):
         from song_scrounger.spotify_client import SpotifyClient
         from song_scrounger.util import get_spotify_creds, get_spotify_bearer_token
         from tests import helper
@@ -920,9 +946,4 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
 
         song_scrounger = SongScrounger(spotify_client)
         input_file_path = helper.get_path_to_test_input_file(input_file_name)
-        results = await song_scrounger.find_songs(input_file_path)
-
-        all_matching_spotify_uris = []
-        for song_name, songs in results.items():
-            all_matching_spotify_uris.extend([song.spotify_uri for song in songs])
-        await spotify_client.create_playlist(playlist_name, all_matching_spotify_uris)
+        return await song_scrounger.find_songs(input_file_path)
