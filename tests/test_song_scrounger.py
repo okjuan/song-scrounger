@@ -787,7 +787,6 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(is_mentioned)
 
-    @unittest.skip("Integration tests disabled by default")
     async def test_find_songs__mocked_spotify_client__song_w_single_artist(self):
         from tests import helper
         self.mock_spotify_client.find_track.return_value = [
@@ -809,6 +808,36 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             set([song.spotify_uri for song in results["American Pie"]]),
             set(["spotify:track:1fDsrQ23eTAVFElUMaf38X"]))
+
+    async def test_find_songs__spotify_song_title_contains_metadata__song_is_matched_regardless(self):
+        from tests import helper
+        self.mock_spotify_client.find_track.return_value = [
+            mock_spotify_track_factory(
+                name="Time Is On My Side - Mono Version",
+                artists=[mock_spotify_artist_factory(name="The Rolling Stones")],
+                uri="spotify:track:2jaN6NgXflZTj2z9CWcqaP",
+                popularity=None
+            ),
+            mock_spotify_track_factory(
+                name="Time Is On My Side",
+                artists=[mock_spotify_artist_factory(name="Irma Thomas")],
+                uri="spotify:track:6IpxLzChgCbFSJwso2Q84D",
+                popularity=None
+            ),
+        ]
+        input_file_path = helper.get_path_to_test_input_file(
+            "song_that_contains_metadata_in_title_on_spotify.txt")
+
+        results = await self.song_scrounger.find_songs(input_file_path)
+
+        self.mock_spotify_client.find_track.assert_any_call("Time Is On My Side")
+        self.assertEqual(1, len(results.keys()))
+        self.assertIn("Time Is On My Side", results.keys())
+        self.assertEqual(len(results["Time Is On My Side"]), 1)
+        self.assertEqual(
+            set([song.spotify_uri for song in results["Time Is On My Side"]]),
+            set(["spotify:track:2jaN6NgXflZTj2z9CWcqaP"]))
+        self.assertIn("The Rolling Stones", list(results["Time Is On My Side"])[0].artists)
 
     @unittest.skip("Integration tests disabled by default")
     async def test_find_songs__song_w_single_artist(self):
