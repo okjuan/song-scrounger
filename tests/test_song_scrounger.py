@@ -787,8 +787,9 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(is_mentioned)
 
-    async def test_find_songs__mocked_spotify_client__song_w_single_artist(self):
-        from tests import helper
+
+    @patch("song_scrounger.song_scrounger.read_file_contents", return_value="When Don McLean recorded \"American Pie\"")
+    async def test_find_songs__mocked_spotify_client__song_w_single_artist(self, mock_read_file_contents):
         self.mock_spotify_client.find_track.return_value = [
             mock_spotify_track_factory(
                 name="American Pie",
@@ -797,10 +798,10 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
                 popularity=None
             ),
         ]
-        input_file_path = helper.get_path_to_test_input_file("single_artist_mentioned.txt")
 
-        results = await self.song_scrounger.find_songs(input_file_path)
+        results = await self.song_scrounger.find_songs("mock file path")
 
+        mock_read_file_contents.assert_called_once_with("mock file path")
         self.mock_spotify_client.find_track.assert_any_call("American Pie")
         self.assertEqual(1, len(results.keys()))
         self.assertIn("American Pie", results.keys())
@@ -809,8 +810,9 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
             set([song.spotify_uri for song in results["American Pie"]]),
             set(["spotify:track:1fDsrQ23eTAVFElUMaf38X"]))
 
-    async def test_find_songs__spotify_song_title_contains_metadata__song_is_matched_regardless(self):
-        from tests import helper
+    @patch("song_scrounger.song_scrounger.read_file_contents", return_value="The song \"Time Is On My Side\" by the Rolling Stones cannot be found verbatim on Spotify")
+    async def test_find_songs__spotify_song_title_contains_metadata__song_is_matched_regardless(
+        self, mock_read_file_contents):
         self.mock_spotify_client.find_track.return_value = [
             mock_spotify_track_factory(
                 name="Time Is On My Side - Mono Version",
@@ -825,11 +827,10 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
                 popularity=None
             ),
         ]
-        input_file_path = helper.get_path_to_test_input_file(
-            "song_that_contains_metadata_in_title_on_spotify.txt")
 
-        results = await self.song_scrounger.find_songs(input_file_path)
+        results = await self.song_scrounger.find_songs("mock file path")
 
+        mock_read_file_contents.assert_called_once_with("mock file path")
         self.mock_spotify_client.find_track.assert_any_call("Time Is On My Side")
         self.assertEqual(1, len(results.keys()))
         self.assertIn("Time Is On My Side", results.keys())
