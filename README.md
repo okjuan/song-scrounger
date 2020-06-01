@@ -16,19 +16,17 @@ async def main():
     song_scrounger = SongScrounger(spotify_client)
     # assuming it is in the current working directory
     input_file_path = "input_file.txt"
-    songs = await song_scrounger.find_songs(input_file_path)
+    results = await song_scrounger.find_songs(input_file_path)
 
-    # When no relevant artist is found in the input file,
-    # Song Scrounger returns multiple matches based purely on song name
-    all_matching_spotify_uris = [
-        list(spotify_uris)[0]
-        for _, spotify_uris in songs.items()
-        if len(spotify_uris) > 0
-    ]
+    # SongScrounger.find_songs() returns a list of hits for each song found in the input file
+    # - e.g. assuming "American Pie" is mentioned in the input file results["American Pie"]
+    #       will contain a list of 'Song' objects, each by a different artist
+    all_spotify_uris = []
+    for song_name, songs in results.items():
+        all_spotify_uris.extend([song.spotify_uri for song in songs])
 
     playlist_name = "My New Playlist Created by Song Scrounger"
-    await spotify_client.create_playlist(playlist_name, all_matching_spotify_uris)
-
+    await spotify_client.create_playlist(playlist_name, all_spotify_uris)
 
 
 if __name__ == "__main__":

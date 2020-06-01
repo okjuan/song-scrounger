@@ -33,8 +33,15 @@ class SpotifyClient:
             raise e
 
         return [
-            track for track in results.tracks if track.name.lower() == track_name.lower()
+            track
+            for track in results.tracks
+            if self._get_track_name_without_metadata(track).lower() == track_name.lower()
         ]
+
+    def _get_track_name_without_metadata(self, track):
+        if (tokens := track.name.split("-")) != [track.name]:
+            return tokens[0].strip()
+        return track.name
 
     async def create_playlist(self, name, spotify_uris):
         """Creates Spotify playlist containing given tracks.
