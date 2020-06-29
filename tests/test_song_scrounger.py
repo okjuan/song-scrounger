@@ -902,7 +902,7 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
         results = await self.song_scrounger.find_songs("mock file path")
 
         mock_read_file_contents.assert_called_once_with("mock file path")
-        self.mock_spotify_client.find_track.assert_any_call("Mock Song Name")
+        self.mock_spotify_client.find_track.assert_called_once_with("Mock Song Name")
         self.assertEqual(len(results.keys()), 1)
         self.assertEqual(len(results["Mock Song Name"]), 1)
 
