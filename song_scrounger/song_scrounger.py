@@ -35,7 +35,9 @@ class SongScrounger:
             song_names = self.find_song_names(paragraph)
             for song_name in song_names:
                 songs = await self.search_spotify(song_name)
-                songs = self.filter_if_any_artists_mentioned(songs, text)
+                songs = self.filter_if_any_artists_mentioned(songs, paragraph)
+                if len(songs) == 0:
+                    songs = self.filter_if_any_artists_mentioned(songs, text)
                 songs = self.reduce_by_popularity_per_artist(songs)
                 results[song_name] = self.set_union(results[song_name], songs)
         return results

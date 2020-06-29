@@ -197,12 +197,12 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(results["Sorry"]), 1)
         self.assertEqual(results["Sorry"], set(songs))
 
-    @patch("song_scrounger.song_scrounger.read_file_contents", return_value="\"Sorry\" by Justin Bieber...\n\"Sorry\" by Nothing But Thieves")
+    @patch("song_scrounger.song_scrounger.read_file_contents", return_value="\"Sorry\" by Justin Bieber...\"Sorry\" by Nothing But Thieves")
     async def test_find_songs__homonym_songs_w_different_artists__returns_both_versions(self, mock_read_file_contents):
         input_file_name = "mock input file"
-        text = "\"Sorry\" by Justin Bieber...\n\"Sorry\" by Nothing But Thieves"
+        text = "\"Sorry\" by Justin Bieber...\"Sorry\" by Nothing But Thieves"
         self.song_scrounger._get_paragraphs = MagicMock(return_value=[
-            "\"Sorry\" by Justin Bieber...", "\"Sorry\" by Nothing But Thieves"])
+            "\"Sorry\" by Justin Bieber...\"Sorry\" by Nothing But Thieves"])
         self.song_scrounger.find_song_names = MagicMock(
             return_value = ["Sorry"]
         )
@@ -851,6 +851,36 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(results.keys()), 1)
         self.assertEqual(len(results["Mock Song Name"]), 1)
 
+    @patch(
+        "song_scrounger.song_scrounger.read_file_contents",
+        return_value="\"Mock Song Name\" by Mock Artist\nOther Mock Artist"
+    )
+    async def test_find_songs__multiple_artists_match__prefers_artist_in_same_paragraph(self, mock_read_file_contents):
+        self.mock_spotify_client.find_track.return_value = [
+            mock_spotify_track_factory(
+                name="Mock Song Name",
+                artists=[mock_spotify_artist_factory(name="Mock Artist")],
+                uri="spotify:track:mock1",
+                popularity=1
+            ),
+            mock_spotify_track_factory(
+                name="Mock Song Name",
+                artists=[mock_spotify_artist_factory(name="Other Mock Artist")],
+                uri="spotify:track:mock2",
+                popularity=1
+            )
+        ]
+
+        results = await self.song_scrounger.find_songs("mock file path")
+
+        mock_read_file_contents.assert_called_once_with("mock file path")
+        self.mock_spotify_client.find_track.assert_called_once_with("Mock Song Name")
+        self.assertEqual(len(results.keys()), 1)
+        self.assertEqual(len(results["Mock Song Name"]), 1)
+        self.assertEqual(list(results["Mock Song Name"])[0].name, "Mock Song Name")
+        self.assertEqual(list(results["Mock Song Name"])[0].spotify_uri, "spotify:track:mock1")
+        self.assertEqual(len(list((results["Mock Song Name"]))[0].artists), 1)
+        self.assertEqual(list(results["Mock Song Name"])[0].artists[0], "Mock Artist")
 
     @unittest.skip("Integration tests disabled by default")
     async def test_find_songs__song_w_single_artist(self):
