@@ -362,7 +362,7 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
             "spotify:track:6rAXHPd18PZ6W8m9EectzH",
             artists=["Nothing But Thieves"]
         )
-        self.song_scrounger.is_mentioned = MagicMock(side_effect=[True, False])
+        self.song_scrounger.is_mentioned = MagicMock(side_effect=[True, False, False, False])
 
         filtered_songs = self.song_scrounger.filter_by_mentioned_artist(
             [song_by_mentioned_artist, song_by_unmentioned_artist], text)
@@ -379,11 +379,11 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
             "spotify:track:09CtPGIpYB4BrO8qb1RGsF",
             artists=["Justin Bieber"]
         )]
-        self.song_scrounger.is_mentioned = MagicMock(return_value=False)
+        self.song_scrounger.is_mentioned_verbatim = MagicMock(return_value=False)
 
         filtered_songs = self.song_scrounger.filter_by_mentioned_artist(songs, text)
 
-        self.song_scrounger.is_mentioned.assert_called_once_with("Justin Bieber", text)
+        self.song_scrounger.is_mentioned_verbatim.assert_any_call("Justin Bieber", text)
         self.assertEqual(len(filtered_songs), 0)
 
     async def test_filter_by_mentioned_artist__multiple_artist_per_song__skips_duplicates(self):
@@ -393,12 +393,12 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
             "spotify:track:2Fxmhks0bxGSBdJ92vM42m",
             ["Billie Eilish", "Finneas O'Connell"]
         )]
-        self.song_scrounger.is_mentioned = MagicMock(return_value=True)
+        self.song_scrounger.is_mentioned_verbatim = MagicMock(return_value=True)
 
         filtered_songs = self.song_scrounger.filter_by_mentioned_artist(songs, text)
 
         self.assertTrue(
-            get_num_times_called(self.song_scrounger.is_mentioned) >= 1)
+            get_num_times_called(self.song_scrounger.is_mentioned_verbatim) >= 1)
         self.assertEqual(len(filtered_songs), 1)
         filtered_songs_list = list(filtered_songs)
         self.assertEqual(filtered_songs_list[0].name, "bad guy")
@@ -646,24 +646,51 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(paragraphs[0], "Paragraph one")
         self.assertEqual(paragraphs[1], "Paragraph two")
 
-    async def test_is_mentioned__true(self):
+    async def test_is_partially_mentioned__true(self):
+        word, text = "Lonnie Donnegan & His Skiffle Group", "Lonnie Donnegan was a solo artist"
+
+        is_mentioned = self.song_scrounger.is_partially_mentioned(word, text)
+
+        self.assertTrue(is_mentioned)
+
+    async def test_is_partially_mentioned__true2(self):
+        word, text = "Lonnie Donnegan and His Skiffle Group", "Lonnie Donnegan was a solo artist"
+
+        is_mentioned = self.song_scrounger.is_partially_mentioned(word, text)
+
+        self.assertTrue(is_mentioned)
+
+    async def test_is_partially_mentioned__true3(self):
+        word, text = "Lonnie Donnegan Band", "Lonnie Donnegan was a solo artist"
+
+        is_mentioned = self.song_scrounger.is_partially_mentioned(word, text)
+
+        self.assertTrue(is_mentioned)
+
+    async def test_is_partially_mentioned__single_word__splits_safely(self):
+        word, text = "Cher", "Doesn't matter"
+
+        # Assert does not cause exception
+        is_mentioned = self.song_scrounger.is_partially_mentioned(word, text)
+
+    async def test_is_mentioned_verbatim__true(self):
         word, text = "Justin Bieber", "Hey, it's Justin Bieber"
 
-        is_mentioned = self.song_scrounger.is_mentioned(word, text)
+        is_mentioned = self.song_scrounger.is_mentioned_verbatim(word, text)
 
         self.assertTrue(is_mentioned)
 
-    async def test_is_mentioned__ignores_case(self):
+    async def test_is_mentioned_verbatim__ignores_case(self):
         word, text = "JUSTIN bieber", "Hey, it's Justin Bieber"
 
-        is_mentioned = self.song_scrounger.is_mentioned(word, text)
+        is_mentioned = self.song_scrounger.is_mentioned_verbatim(word, text)
 
         self.assertTrue(is_mentioned)
 
-    async def test_is_mentioned__false(self):
+    async def test_is_mentioned_verbatim__false(self):
         word, text = "Justin Bieber", "Oh no, it's Justin Timberlake"
 
-        is_mentioned = self.song_scrounger.is_mentioned(word, text)
+        is_mentioned = self.song_scrounger.is_mentioned_verbatim(word, text)
 
         self.assertFalse(is_mentioned)
 

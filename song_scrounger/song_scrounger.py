@@ -35,8 +35,9 @@ class SongScrounger:
             song_names = self.find_song_names(paragraph)
             for song_name in song_names:
                 songs = await self.search_spotify(song_name)
+                total_songs = len(songs)
                 songs = self.filter_if_any_artists_mentioned(songs, paragraph)
-                if len(songs) == 0:
+                if len(songs) == total_songs:
                     songs = self.filter_if_any_artists_mentioned(songs, text)
                 songs = self.reduce_by_popularity_per_artist(songs)
                 results[song_name] = self.set_union(results[song_name], songs)
@@ -76,9 +77,16 @@ class SongScrounger:
         songs_whose_artists_are_mentioned = set()
         for song in songs:
             for artist in song.artists:
-                if self.is_mentioned(artist, text) or self.is_mentioned_in_parts(artist, text):
+                if self.is_mentioned(artist, text):
                     songs_whose_artists_are_mentioned.add(song)
         return songs_whose_artists_are_mentioned
+
+    def is_mentioned(self, artist, text):
+        return (
+            self.is_mentioned_verbatim(artist, text) or
+            self.is_mentioned_in_parts(artist, text) or
+            self.is_partially_mentioned(artist, text)
+        )
 
     async def search_spotify(self, song_name):
         """
@@ -118,7 +126,7 @@ class SongScrounger:
             return song1 if song1.popularity >= song2.popularity else song2
         return reduce(pick_more_popular_song, songs)
 
-    def is_mentioned(self, word, text):
+    def is_mentioned_verbatim(self, word, text):
         """True iff text contains word, ignoring case.
 
         Params:
@@ -127,6 +135,24 @@ class SongScrounger:
         """
         word, text = word.lower(), text.lower()
         return self.is_mentioned_as_full_str(word, text)
+
+    def is_partially_mentioned(self, word, text):
+        """
+
+        e.g. "Lonnie Donnegan & His Skiffle Group" is deemed mentioned
+        in the text "The artist Lonnie Donnegan".
+
+        Params:
+            word (str): e.g. "Lonnie Donnegan & His Skiffle Group".
+            text (str): e.g. "The artist Lonnie Donnegan".
+        """
+        word = word.lower()
+        separators = ["and", "&", "band"]
+        for separator in separators:
+            trimmed_word = word.split(separator)[0].strip()
+            if self.is_mentioned_verbatim(trimmed_word, text):
+                return True
+        return False
 
     def is_mentioned_in_parts(self, word, text):
         word, text = word.lower(), text.lower()
