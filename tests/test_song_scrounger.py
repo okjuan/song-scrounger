@@ -732,6 +732,19 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(is_mentioned)
 
+    async def test_is_mentioned_as_full_str__matches_synonym__symbol_to_word(self):
+        word, text = "&", "This and that"
+
+        is_mentioned = self.song_scrounger.is_mentioned_as_full_str(word, text)
+
+        self.assertTrue(is_mentioned)
+
+    async def test_is_mentioned_as_full_str__matches_synonym__word_to_symbol(self):
+        word, text = "and", "This & that"
+
+        is_mentioned = self.song_scrounger.is_mentioned_as_full_str(word, text)
+
+        self.assertTrue(is_mentioned)
 
     @patch("song_scrounger.song_scrounger.read_file_contents", return_value="When Don McLean recorded \"American Pie\"")
     async def test_find_songs__mocked_spotify_client__song_w_single_artist(self, mock_read_file_contents):

@@ -137,6 +137,18 @@ class SongScrounger:
         return True
 
     def is_mentioned_as_full_str(self, word, text):
+        return len(self.find_occurrences(word, text)) > 0 or self.is_mentioned_as_synonym(word, text)
+
+    def is_mentioned_as_synonym(self, word, text):
+        synonyms = [{"and", "&"}]
+        for synonym_set in synonyms:
+            if word in synonym_set:
+                for synonym in synonym_set:
+                    if len(self.find_occurrences(synonym, text)) > 0:
+                        return True
+        return False
+
+    def find_occurrences(self, word, text):
         """Returns True iff 'word' occurs in 'text' but not as a substring of another word.
 
         Case-sensitive. Can be made case-insensitive by lowering args before calling.
@@ -145,7 +157,7 @@ class SongScrounger:
             word (str): e.g. "Hello".
             text (str): e.g. "Hello, how are you?".
         """
-        return len(re.findall(f"(^|[^a-zA-Z]){word}([^a-zA-Z]|$)", text)) > 0
+        return re.findall(f"(^|[^a-zA-Z]){word}([^a-zA-Z]|$)", text)
 
     def _get_paragraphs(self, text):
         "Returns non-empty paragraphs with one or more non-whitespace characters."
