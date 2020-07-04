@@ -1026,18 +1026,18 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
         self.assertGreater(len(results["American Pie"]), 10)
 
     @unittest.skip("Skip integration tests by default")
-    async def test_find_songs__for_duplicate_songs(self):
+    async def test_find_songs__for_duplicate_song_names(self):
         input_file_name = "test_duplicate_songs.txt"
 
         results = await self._run_find_songs_test(input_file_name)
 
         self.assertEqual(len(results.keys()), 1)
         self.assertTrue("Sorry" in results.keys())
-        self.assertGreater(len(results["Sorry"]), 1)
+        self.assertEqual(len(results["Sorry"]), 1)
         self.assertIsNotNone(list(results["Sorry"])[0])
         self.assertEqual(list(results["Sorry"])[0].name, "Sorry")
-        self.assertIn("spotify:track:", list(results["Sorry"])[0].spotify_uri)
-        self.assertGreaterEqual(len(list(results["Sorry"])[0].artists), 1)
+        self.assertIn("spotify:track:09CtPGIpYB4BrO8qb1RGsF", list(results["Sorry"])[0].spotify_uri)
+        self.assertEqual(len(list(results["Sorry"])[0].artists), 1)
 
     @unittest.skip("Skip integration tests by default")
     async def test_find_songs__simple_artist_detection(self):
@@ -1149,14 +1149,18 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
             list(results["Halfway to Paradise"])[0].artists
         )
 
-        self.assertEqual(len(results["Rock with the Caveman"]), 1)
-        self.assertIn(
-            "Tommy Steele",
-            list(results["Rock with the Caveman"])[0].artists
+        self.assertEqual(len(results["Rock with the Caveman"]), 2)
+        rock_w_caveman_results = list(results["Rock with the Caveman"])
+        self.assertTrue(
+            "Tommy Steele" in rock_w_caveman_results[0].artists or
+            "Tommy Steele" in rock_w_caveman_results[1].artists
+        )
+        self.assertTrue(
+            "Tommy Steele & The Steelmen" in rock_w_caveman_results[0].artists or
+            "Tommy Steele & The Steelmen" in rock_w_caveman_results[1].artists
         )
 
-        # PROB: Lonnie Donegan is not matched with Lonnie Donegan & His Skiffle Group
-        self.assertEqual(len(results["Rock Island Line"]), 11)
+        self.assertEqual(len(results["Rock Island Line"]), 1)
 
         # PROB: Spotify has the song as "Living Doll"
         self.assertEqual(len(results["Livin' Doll"]), 0)
