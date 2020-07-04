@@ -35,13 +35,16 @@ class SongScrounger:
             song_names = self.find_song_names(paragraph)
             for song_name in song_names:
                 songs = await self.search_spotify(song_name)
-                total_songs = len(songs)
-                songs = self.filter_if_any_artists_mentioned(songs, paragraph)
-                if len(songs) == total_songs:
-                    songs = self.filter_if_any_artists_mentioned(songs, text)
+                songs = self.filter_if_any_artists_mentioned_greedy(songs, paragraph, text)
                 songs = self.reduce_by_popularity_per_artist(songs)
                 results[song_name] = self.set_union(results[song_name], songs)
         return results
+
+    def filter_if_any_artists_mentioned_greedy(self, songs, subset_text, whole_text):
+        filtered_songs = self.filter_if_any_artists_mentioned(songs, subset_text)
+        if len(filtered_songs) > 1 and len(filtered_songs) == len(songs):
+            filtered_songs = self.filter_if_any_artists_mentioned(songs, whole_text)
+        return filtered_songs
 
     def set_union(self, song_set_A, song_set_B):
         spotify_uris_seen_already, union = set(), set()
