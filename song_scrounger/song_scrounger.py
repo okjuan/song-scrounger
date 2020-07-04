@@ -35,10 +35,16 @@ class SongScrounger:
             song_names = self.find_song_names(paragraph)
             for song_name in song_names:
                 songs = await self.search_spotify(song_name)
-                songs = self.filter_if_any_artists_mentioned(songs, text)
+                songs = self.filter_if_any_artists_mentioned_greedy(songs, paragraph, text)
                 songs = self.reduce_by_popularity_per_artist(songs)
                 results[song_name] = self.set_union(results[song_name], songs)
         return results
+
+    def filter_if_any_artists_mentioned_greedy(self, songs, subset_text, whole_text):
+        filtered_songs = self.filter_if_any_artists_mentioned(songs, subset_text)
+        if len(filtered_songs) > 1 and len(filtered_songs) == len(songs):
+            filtered_songs = self.filter_if_any_artists_mentioned(songs, whole_text)
+        return filtered_songs
 
     def set_union(self, song_set_A, song_set_B):
         spotify_uris_seen_already, union = set(), set()
@@ -74,9 +80,16 @@ class SongScrounger:
         songs_whose_artists_are_mentioned = set()
         for song in songs:
             for artist in song.artists:
-                if self.is_mentioned(artist, text) or self.is_mentioned_in_parts(artist, text):
+                if self.is_mentioned(artist, text):
                     songs_whose_artists_are_mentioned.add(song)
         return songs_whose_artists_are_mentioned
+
+    def is_mentioned(self, artist, text):
+        return (
+            self.is_mentioned_verbatim(artist, text) or
+            self.is_mentioned_in_parts(artist, text) or
+            self.is_partially_mentioned(artist, text)
+        )
 
     async def search_spotify(self, song_name):
         """
@@ -98,14 +111,17 @@ class SongScrounger:
         }
 
     def reduce_by_popularity_per_artist(self, songs):
+        return set([
+            self.pick_most_popular_song(dup_songs)
+            for dup_songs in self.group_songs_by_artist(songs)
+        ])
+
+    def group_songs_by_artist(self, songs):
         cache_key_from_artists = lambda artists: "-".join(artists)
         by_same_artist = defaultdict(set)
         for song in songs:
             by_same_artist[cache_key_from_artists(song.artists)].add(song)
-        return set([
-            self.pick_most_popular_song(songs_grouped_by_artist)
-            for _, songs_grouped_by_artist in by_same_artist.items()
-        ])
+        return by_same_artist.values()
 
     def pick_most_popular_song(self, songs):
         def pick_more_popular_song(song1, song2):
@@ -116,7 +132,7 @@ class SongScrounger:
             return song1 if song1.popularity >= song2.popularity else song2
         return reduce(pick_more_popular_song, songs)
 
-    def is_mentioned(self, word, text):
+    def is_mentioned_verbatim(self, word, text):
         """True iff text contains word, ignoring case.
 
         Params:
@@ -125,6 +141,24 @@ class SongScrounger:
         """
         word, text = word.lower(), text.lower()
         return self.is_mentioned_as_full_str(word, text)
+
+    def is_partially_mentioned(self, word, text):
+        """
+
+        e.g. "Lonnie Donnegan & His Skiffle Group" is deemed mentioned
+        in the text "The artist Lonnie Donnegan".
+
+        Params:
+            word (str): e.g. "Lonnie Donnegan & His Skiffle Group".
+            text (str): e.g. "The artist Lonnie Donnegan".
+        """
+        word = word.lower()
+        separators = ["and", "&", "band"]
+        for separator in separators:
+            trimmed_word = word.split(separator)[0].strip()
+            if self.is_mentioned_verbatim(trimmed_word, text):
+                return True
+        return False
 
     def is_mentioned_in_parts(self, word, text):
         word, text = word.lower(), text.lower()
@@ -135,6 +169,18 @@ class SongScrounger:
         return True
 
     def is_mentioned_as_full_str(self, word, text):
+        return len(self.find_occurrences(word, text)) > 0 or self.is_mentioned_as_synonym(word, text)
+
+    def is_mentioned_as_synonym(self, word, text):
+        synonyms = [{"and", "&"}]
+        for synonym_set in synonyms:
+            if word in synonym_set:
+                for synonym in synonym_set:
+                    if len(self.find_occurrences(synonym, text)) > 0:
+                        return True
+        return False
+
+    def find_occurrences(self, word, text):
         """Returns True iff 'word' occurs in 'text' but not as a substring of another word.
 
         Case-sensitive. Can be made case-insensitive by lowering args before calling.
@@ -143,7 +189,7 @@ class SongScrounger:
             word (str): e.g. "Hello".
             text (str): e.g. "Hello, how are you?".
         """
-        return len(re.findall(f"(^|[^a-zA-Z]){word}([^a-zA-Z]|$)", text)) > 0
+        return re.findall(f"(^|[^a-zA-Z]){word}([^a-zA-Z]|$)", text)
 
     def _get_paragraphs(self, text):
         "Returns non-empty paragraphs with one or more non-whitespace characters."
