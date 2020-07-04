@@ -111,14 +111,17 @@ class SongScrounger:
         }
 
     def reduce_by_popularity_per_artist(self, songs):
+        return set([
+            self.pick_most_popular_song(dup_songs)
+            for dup_songs in self.group_songs_by_artist(songs)
+        ])
+
+    def group_songs_by_artist(self, songs):
         cache_key_from_artists = lambda artists: "-".join(artists)
         by_same_artist = defaultdict(set)
         for song in songs:
             by_same_artist[cache_key_from_artists(song.artists)].add(song)
-        return set([
-            self.pick_most_popular_song(songs_grouped_by_artist)
-            for _, songs_grouped_by_artist in by_same_artist.items()
-        ])
+        return by_same_artist.values()
 
     def pick_most_popular_song(self, songs):
         def pick_more_popular_song(song1, song2):
