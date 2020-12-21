@@ -1127,9 +1127,8 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(results["Heartbreaker"]), 1)
         self.assertIn("Led Zeppelin", list(results["Heartbreaker"])[0].artists)
 
-        # PROB: Why is there only one hit here, by [ocean jams]? They're not mentioned...
-        # (It's ok that it's not detected as a Rolling Stones song)
-        self.assertEqual(len(results["Satisfaction"]), 1)
+        # (It's ok that it's not detected as a Rolling Stones song bc they name it something else)
+        self.assertEqual(len(results["Satisfaction"]), 15)
 
         self.assertEqual(len(results["(I Can't Get No) Satisfaction"]), 1)
         self.assertIn(
@@ -1143,10 +1142,15 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
             list(results["Time is On My Side"])[0].artists
         )
 
-        self.assertEqual(len(results["Halfway to Paradise"]), 1)
+        # matches both 'Billy Fury' and 'Billy Fury and The Tornados'
+        self.assertEqual(len(results["Halfway to Paradise"]), 2)
         self.assertIn(
             "Billy Fury",
-            list(results["Halfway to Paradise"])[0].artists
+            list(results["Halfway to Paradise"])[0].artists[0]
+        )
+        self.assertIn(
+            "Billy Fury",
+            list(results["Halfway to Paradise"])[1].artists[0]
         )
 
         self.assertEqual(len(results["Rock with the Caveman"]), 2)
@@ -1160,7 +1164,8 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
             "Tommy Steele & The Steelmen" in rock_w_caveman_results[1].artists
         )
 
-        self.assertEqual(len(results["Rock Island Line"]), 1)
+        # matches both 'Lonnie Donnegan' and 'Lonnie Donnegan & His Skiffle Group'
+        self.assertEqual(len(results["Rock Island Line"]), 2)
 
         # PROB: Spotify has the song as "Living Doll"
         self.assertEqual(len(results["Livin' Doll"]), 0)
