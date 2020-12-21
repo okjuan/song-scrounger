@@ -32,57 +32,57 @@ class SongScrounger:
         results = defaultdict(set)
         paragraphs = self._get_paragraphs(text)
         for paragraph in paragraphs:
-            song_names = self.find_song_names(paragraph)
+            song_names = self.find_names(paragraph)
             for song_name in song_names:
-                songs = await self.search_spotify(song_name)
+                songs = await self.search_song_on_spotify(song_name)
                 songs = self.filter_if_any_artists_mentioned_greedy(songs, paragraph, text)
                 songs = self.reduce_by_popularity_per_artist(songs)
                 results[song_name] = self.set_union(results[song_name], songs)
         return results
 
-    def filter_if_any_artists_mentioned_greedy(self, songs, subset_text, whole_text):
-        filtered_songs = self.filter_if_any_artists_mentioned(songs, subset_text)
-        if len(filtered_songs) > 1 and len(filtered_songs) == len(songs):
-            filtered_songs = self.filter_if_any_artists_mentioned(songs, whole_text)
-        return filtered_songs
+    def filter_if_any_artists_mentioned_greedy(self, songs_or_albums, subset_text, whole_text):
+        filtered = self.filter_if_any_artists_mentioned(songs_or_albums, subset_text)
+        if len(filtered) > 1 and len(filtered) == len(songs_or_albums):
+            filtered = self.filter_if_any_artists_mentioned(songs_or_albums, whole_text)
+        return filtered
 
-    def set_union(self, song_set_A, song_set_B):
+    def set_union(self, song_or_album_set_A, song_or_album_set_B):
         spotify_uris_seen_already, union = set(), set()
-        for song in song_set_A | song_set_B:
-            if song.spotify_uri not in spotify_uris_seen_already:
-                union.add(song)
-                spotify_uris_seen_already.add(song.spotify_uri)
+        for song_or_album in song_or_album_set_A | song_or_album_set_B:
+            if song_or_album.spotify_uri not in spotify_uris_seen_already:
+                union.add(song_or_album)
+                spotify_uris_seen_already.add(song_or_album.spotify_uri)
         return union
 
-    def filter_if_any_artists_mentioned(self, songs, text):
+    def filter_if_any_artists_mentioned(self, songs_or_albums, text):
         """
         Params:
-            songs (set(Song)).
+            songs_or_albums (set(Song)).
             text (str).
 
         Return:
             (set(Song)).
         """
-        songs_with_mentioned_artists = self.filter_by_mentioned_artist(songs, text)
-        if len(songs_with_mentioned_artists) == 0:
-            return set(songs)
-        return songs_with_mentioned_artists
+        with_mentioned_artists = self.filter_by_mentioned_artist(songs_or_albums, text)
+        if len(with_mentioned_artists) == 0:
+            return set(songs_or_albums)
+        return with_mentioned_artists
 
-    def filter_by_mentioned_artist(self, songs, text):
-        """Returns only songs whose artist(s) is/are mentioned in the text.
+    def filter_by_mentioned_artist(self, songs_or_albums, text):
+        """Returns only songs_or_albums whose artist(s) is/are mentioned in the text.
         Params:
-            songs (set(Song)).
+            songs_or_albums (set(Song|Album)).
             text (str).
 
         Return:
-            (set(Song)).
+            (set(Song|Album)).
         """
-        songs_whose_artists_are_mentioned = set()
-        for song in songs:
-            for artist in song.artists:
+        with_mentioned_artists = set()
+        for song_or_album in songs_or_albums:
+            for artist in song_or_album.artists:
                 if self.is_mentioned(artist, text):
-                    songs_whose_artists_are_mentioned.add(song)
-        return songs_whose_artists_are_mentioned
+                    with_mentioned_artists.add(song_or_album)
+        return with_mentioned_artists
 
     def is_mentioned(self, artist, text):
         return (
@@ -91,7 +91,7 @@ class SongScrounger:
             self.is_partially_mentioned(artist, text)
         )
 
-    async def search_spotify(self, song_name):
+    async def search_song_on_spotify(self, song_name):
         """
         Params:
             song_name (str): e.g. "Sorry".
@@ -110,27 +110,27 @@ class SongScrounger:
             for track in tracks
         }
 
-    def reduce_by_popularity_per_artist(self, songs):
+    def reduce_by_popularity_per_artist(self, songs_or_albums):
         return set([
-            self.pick_most_popular_song(dup_songs)
-            for dup_songs in self.group_songs_by_artist(songs)
+            self.pick_most_popular(dups)
+            for dups in self.group_by_artist(songs_or_albums)
         ])
 
-    def group_songs_by_artist(self, songs):
+    def group_by_artist(self, songs_or_albums):
         cache_key_from_artists = lambda artists: "-".join(artists)
         by_same_artist = defaultdict(set)
-        for song in songs:
-            by_same_artist[cache_key_from_artists(song.artists)].add(song)
+        for song_or_album in songs_or_albums:
+            by_same_artist[cache_key_from_artists(song_or_album.artists)].add(song_or_album)
         return by_same_artist.values()
 
-    def pick_most_popular_song(self, songs):
-        def pick_more_popular_song(song1, song2):
-            if song1.popularity is None:
-                raise ValueError(f"{song1.name}'s popularity is None")
-            elif song2.popularity is None:
-                raise ValueError(f"{song2.name}'s popularity is None")
-            return song1 if song1.popularity >= song2.popularity else song2
-        return reduce(pick_more_popular_song, songs)
+    def pick_most_popular(self, songs_or_albums):
+        def pick_more_popular(song_or_album1, song_or_album2):
+            if song_or_album1.popularity is None:
+                raise ValueError(f"{song_or_album1.name}'s popularity is None")
+            elif song_or_album2.popularity is None:
+                raise ValueError(f"{song_or_album2.name}'s popularity is None")
+            return song_or_album1 if song_or_album1.popularity >= song_or_album2.popularity else song_or_album2
+        return reduce(pick_more_popular, songs_or_albums)
 
     def is_mentioned_verbatim(self, word, text):
         """True iff text contains word, ignoring case.
@@ -181,13 +181,16 @@ class SongScrounger:
         return False
 
     def find_occurrences(self, word, text):
-        """Returns True iff 'word' occurs in 'text' but not as a substring of another word.
+        """Returns list of occurrences iff 'word' occurs in 'text' but not as a substring of another word.
 
         Case-sensitive. Can be made case-insensitive by lowering args before calling.
 
         Params:
             word (str): e.g. "Hello".
             text (str): e.g. "Hello, how are you?".
+
+        Returns:
+            ([string]): e.g. ["Hello"]
         """
         return re.findall(f"(^|[^a-zA-Z]){word}([^a-zA-Z]|$)", text)
 
@@ -196,15 +199,17 @@ class SongScrounger:
         paragraphs = text.split("\n")
         return [p for p in paragraphs if len(p.strip(" ")) > 0]
 
-    def find_song_names(self, text):
-        """Parses song names, removing whitespace and punctuation.
+    def find_names(self, text):
+        """Retrieves quoted strings in text
+
+        Removes whitespace at start and end, and punctuation at the end.
 
         Params:
             text (str): e.g. "I keep using the example \"Sorry\" by Justin Bieber"
         """
-        song_names = self.find_quoted_tokens(text)
-        song_names = map(lambda song_name: song_name.strip(" "), song_names)
-        return map(lambda song_name: song_name.rstrip(",."), song_names)
+        tokens = self.find_quoted_tokens(text)
+        tokens = map(lambda token: token.strip(" "), tokens)
+        return map(lambda token: token.rstrip(",."), tokens)
 
     def find_quoted_tokens(self, text):
         """Retrieves all quoted strings in the order they occur in the given text.
