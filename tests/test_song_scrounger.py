@@ -1176,12 +1176,11 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
 
     async def _run_find_songs_test(self, input_file_name):
         from song_scrounger.spotify_client import SpotifyClient
-        from song_scrounger.util import get_spotify_creds, get_spotify_bearer_token
+        from song_scrounger.util import get_spotify_creds
         from tests import helper
 
         spotify_client_id, spotify_secret_key = get_spotify_creds()
-        spotify_bearer_token = get_spotify_bearer_token()
-        spotify_client = SpotifyClient(spotify_client_id, spotify_secret_key, spotify_bearer_token)
+        spotify_client = SpotifyClient(spotify_client_id, spotify_secret_key)
 
         song_scrounger = SongScrounger(spotify_client)
         input_file_path = helper.get_path_to_test_input_file(input_file_name)

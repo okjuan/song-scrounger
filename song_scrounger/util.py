@@ -19,7 +19,4 @@ def get_spotify_creds():
     return client_id, secret_key
 
 def get_spotify_bearer_token():
-    bearer_token = os.environ.get("SPOTIFY_BEARER_TOKEN")
-    if bearer_token is None:
-        raise Exception("Env var 'SPOTIFY_BEARER_TOKEN' must be set.")
-    return bearer_token
+    return os.environ.get("SPOTIFY_BEARER_TOKEN")
