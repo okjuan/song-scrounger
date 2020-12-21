@@ -1142,16 +1142,13 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
             list(results["Time is On My Side"])[0].artists
         )
 
-        # matches both 'Billy Fury' and 'Billy Fury and The Tornados'
-        self.assertEqual(len(results["Halfway to Paradise"]), 2)
-        self.assertIn(
-            "Billy Fury",
-            list(results["Halfway to Paradise"])[0].artists[0]
-        )
-        self.assertIn(
-            "Billy Fury",
-            list(results["Halfway to Paradise"])[1].artists[0]
-        )
+        # might match both 'Billy Fury' and 'Billy Fury and The Tornados'
+        self.assertLessEqual(len(results["Halfway to Paradise"]), 2)
+        for song in results["Halfway to Paradise"]:
+            self.assertIn(
+                "Billy Fury",
+                song.artists[0]
+            )
 
         self.assertEqual(len(results["Rock with the Caveman"]), 2)
         rock_w_caveman_results = list(results["Rock with the Caveman"])
