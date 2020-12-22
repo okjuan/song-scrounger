@@ -6,6 +6,7 @@ from collections import defaultdict
 from functools import reduce
 
 from .models.song import Song
+from .models.album import Album
 from .spotify_client import SpotifyClient
 from .util import read_file_contents, get_spotify_creds, get_spotify_bearer_token
 
@@ -15,29 +16,40 @@ class SongScrounger:
         self.spotify_client = spotify_client
 
     async def find_songs(self, input_file_path):
-        """Parses given text for songs, matching with artists if mentioned.
+        text = read_file_contents(input_file_path)
+        songs = await self.find_media_items(text, self.search_song_on_spotify)
+        return songs
 
-        Each song is searched on Spotify. The artists in the search results
-        are searched for in the text as well. Any matches are used for
-        song disambiguation.
+    async def find_albums(self, input_file_path):
+        text = read_file_contents(input_file_path)
+        albums = await self.find_media_items(text, self.search_album_on_spotify)
+        return albums
+
+    async def find_media_items(self, text, name_lookup):
+        """Parses given text for names of media items (songs or albums),
+        matching with artists if mentioned.
+
+        Each name is searched using the given name_lookup function.
+        The artists in the search results are searched for in the text as well.
+        Any matches are used for media item disambiguation.
 
         Params:
-            input_file_path (str): path to text file containing 1 or more
-                paragraphs containing song names & perhaps some of their artists.
+            text (str): containing 1 or more paragraphs containing
+                song or album names, and, optionally, their artists.
+            name_lookup (asyn func): given a name (str), returns an object (e.g. Song, Album).
 
         Returns:
-            (dict): key (str) is song name; val (set(Song)) of matching songs.
+            (dict): key (str) is name; val (set(Song|Album)) of matching media items.
         """
-        text = read_file_contents(input_file_path)
         results = defaultdict(set)
         paragraphs = self._get_paragraphs(text)
         for paragraph in paragraphs:
-            song_names = self.find_names(paragraph)
-            for song_name in song_names:
-                songs = await self.search_song_on_spotify(song_name)
-                songs = self.filter_if_any_artists_mentioned_greedy(songs, paragraph, text)
-                songs = self.reduce_by_popularity_per_artist(songs)
-                results[song_name] = self.set_union(results[song_name], songs)
+            names = self.find_names(paragraph)
+            for name in names:
+                media_items = await name_lookup(name)
+                media_items = self.filter_if_any_artists_mentioned_greedy(media_items, paragraph, text)
+                media_items = self.reduce_by_popularity_per_artist(media_items)
+                results[name] = self.set_union(results[name], media_items)
         return results
 
     def filter_if_any_artists_mentioned_greedy(self, songs_or_albums, subset_text, whole_text):
@@ -108,6 +120,25 @@ class SongScrounger:
                 track.popularity
             )
             for track in tracks
+        }
+
+    async def search_album_on_spotify(self, album_name):
+        """
+        Params:
+            album_name (str): e.g. "Sorry".
+
+        Returns:
+            (set(Album)).
+        """
+        albums = await self.spotify_client.find_album(album_name)
+        return {
+            Album(
+                album.name,
+                album.uri,
+                [artist.name for artist in album.artists],
+                album.popularity
+            )
+            for album in albums
         }
 
     def reduce_by_popularity_per_artist(self, songs_or_albums):

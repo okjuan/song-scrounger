@@ -29,19 +29,73 @@ class SpotifyClient:
             async with Client(self.client_id, self.secret_key) as cli:
                 results = await cli.search(track_name, types=["track"])
         except SpotifyException as e:
-            print("Could not add tracks to playlist with error:", e)
+            print("Error occurred when searching tracks on Spotify:", e)
             raise e
 
         return [
             track
             for track in results.tracks
-            if self._get_track_name_without_metadata(track).lower() == track_name.lower()
+            if track.name.lower() == track_name.lower() or
+                self._strip_song_metadata(track.name).lower() == track_name.lower()
         ]
 
-    def _get_track_name_without_metadata(self, track):
-        if (tokens := track.name.split("-")) != [track.name]:
-            return tokens[0].strip()
-        return track.name
+    async def find_album(self, album_name):
+        """Finds the given album, ignoring case.
+        Params:
+            album_name (str).
+
+        Returns:
+            [spotify.Album]: resulting Spotify albums.
+        """
+        if len(album_name) == 0:
+            raise ValueError("Album name cannot be empty.")
+
+        try:
+            # apparently only the async interface supports context management
+            async with Client(self.client_id, self.secret_key) as cli:
+                results = await cli.search(album_name, types=["album"])
+                albums = await cli.get_albums(*[album.uri for album in results.albums])
+        except SpotifyException as e:
+            print("Error occurred when searching albums on Spotify:", e)
+            raise e
+
+        return [
+            album
+            for album in albums
+            if album.name.lower() == album_name.lower() or
+                self._strip_album_metadata(album.name).lower() == album_name.lower()
+        ]
+
+    def _strip_song_metadata(self, name):
+        """
+        Assumptions:
+            - Everything after '-' is metadata
+        """
+        name = name.strip()
+        if (tokens := name.split("-")) != [name]:
+            name = tokens[0].strip()
+        return name
+
+    def _strip_album_metadata(self, name):
+        """
+        Assumptions:
+            - Everything after '-' is metadata
+            - Parentheses contain metadata depending on where they occur
+                - If parentheses occur at the beginning of name, they don't contain metadata
+                - Otherwise, they contain metadata
+            - If at all, only 1 set of parentheses occurs
+            - Parentheses are balanced
+        """
+        name = name.strip()
+
+        if (tokens := name.split("-")) != [name]:
+            name = tokens[0].strip()
+        if "(" in name:
+            open_paren_idx = name.index("(")
+            if open_paren_idx > 0:
+                tokens = name.split("(")
+                name = tokens[0].strip()
+        return name
 
     async def create_playlist(self, name, spotify_uris):
         """Creates Spotify playlist containing given tracks.

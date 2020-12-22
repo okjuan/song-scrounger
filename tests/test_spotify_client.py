@@ -35,10 +35,10 @@ class TestSpotifyClient(unittest.IsolatedAsyncioTestCase):
         )]
         inner_cli = self._get_inner_client(mock_inner_client_ctor)
         inner_cli.search = AsyncMock(return_value=MagicMock(tracks=mock_spotify_tracks))
-        def _get_track_name_without_metadata__ret_vals(track):
-            return track.name
-        self.spotify_client._get_track_name_without_metadata = MagicMock(
-            side_effect=_get_track_name_without_metadata__ret_vals)
+        def _strip_song_metadata(track_name):
+            return track_name
+        self.spotify_client._strip_song_metadata = MagicMock(
+            side_effect=_strip_song_metadata)
 
         results = await self.spotify_client.find_track(track)
 
@@ -61,10 +61,10 @@ class TestSpotifyClient(unittest.IsolatedAsyncioTestCase):
         )]
         inner_cli = self._get_inner_client(mock_inner_client_ctor)
         inner_cli.search = AsyncMock(return_value=MagicMock(tracks=mock_spotify_tracks))
-        def _get_track_name_without_metadata__ret_vals(track):
-            return track.name
-        self.spotify_client._get_track_name_without_metadata = MagicMock(
-            side_effect=_get_track_name_without_metadata__ret_vals)
+        def _strip_song_metadata(track_name):
+            return track_name
+        self.spotify_client._strip_song_metadata = MagicMock(
+            side_effect=_strip_song_metadata)
 
         results = await self.spotify_client.find_track(track)
 
@@ -93,10 +93,10 @@ class TestSpotifyClient(unittest.IsolatedAsyncioTestCase):
         ]
         inner_cli = self._get_inner_client(mock_inner_client_ctor)
         inner_cli.search = AsyncMock(return_value=MagicMock(tracks=mock_spotify_tracks))
-        def _get_track_name_without_metadata__ret_vals(track):
-            return track.name
-        self.spotify_client._get_track_name_without_metadata = MagicMock(
-            side_effect=_get_track_name_without_metadata__ret_vals)
+        def _strip_song_metadata(track_name):
+            return track_name
+        self.spotify_client._strip_song_metadata = MagicMock(
+            side_effect=_strip_song_metadata)
 
         results = await self.spotify_client.find_track(track)
 
@@ -112,29 +112,40 @@ class TestSpotifyClient(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ValueError):
             results = await self.spotify_client.find_track(track)
 
-    async def test_get_track_name_without_metadata__name_contains_metadata__removes_metadata(self):
-        track = mock_spotify_track_factory(
-            "Satisfaction - Mono Version",
-            "Mock URI",
-            ["Mock Artists"],
-            popularity=None
-        )
+    async def test_strip_song_metadata__name_contains_metadata__removes_metadata(self):
+        track_name = "Satisfaction - Mono Version"
 
-        cleaned_track_name = self.spotify_client._get_track_name_without_metadata(track)
+        cleaned_track_name = self.spotify_client._strip_song_metadata(track_name)
 
         self.assertEqual(cleaned_track_name, "Satisfaction")
 
-    async def test_get_track_name_without_metadata__name_does_not_contain_metadata__returns_original(self):
-        track = mock_spotify_track_factory(
-            "   Satisfaction ",
-            "Mock URI",
-            ["Mock Artists"],
-            popularity=None
-        )
+    async def test_strip_song_metadata__name_contains_parentheses_at_beginning__does_not_edit(self):
+        track_name = "(I Can't Get No) Satisfaction"
 
-        cleaned_track_name = self.spotify_client._get_track_name_without_metadata(track)
+        cleaned_track_name = self.spotify_client._strip_song_metadata(track_name)
 
-        self.assertEqual(cleaned_track_name, "   Satisfaction ")
+        self.assertEqual(cleaned_track_name, "(I Can't Get No) Satisfaction")
+
+    async def test_strip_song_metadata__strips_whitespace(self):
+        track_name = "   Satisfaction "
+
+        cleaned_track_name = self.spotify_client._strip_song_metadata(track_name)
+
+        self.assertEqual(cleaned_track_name, "Satisfaction")
+
+    async def test_strip_album_metadata__name_contains_parentheses_at_end__removes_paren(self):
+        track_name = "Revolver (Remastered)"
+
+        cleaned_track_name = self.spotify_client._strip_album_metadata(track_name)
+
+        self.assertEqual(cleaned_track_name, "Revolver")
+
+    async def test_strip_album_metadata__strips_whitespace(self):
+        track_name = "   Satisfaction "
+
+        cleaned_track_name = self.spotify_client._strip_album_metadata(track_name)
+
+        self.assertEqual(cleaned_track_name, "Satisfaction")
 
     @unittest.skip("Integration tests disabled by default.")
     async def test_create_playlist(self):
@@ -166,3 +177,30 @@ class TestSpotifyClient(unittest.IsolatedAsyncioTestCase):
 
         # NOTE: must go check Spotify playlist to make sure song was added
         # TODO: replace manual check
+
+    @unittest.skip("Integration tests disabled by default.")
+    async def test_find_track(self):
+        results = await self.spotify_client.find_track("Redbone")
+
+        self.assertLessEqual(1, len(results))
+        found_childish_gambino_song = TestSpotifyClientHelper.is_one_of_the_artists(
+            results, "Childish Gambino")
+        self.assertTrue(found_childish_gambino_song, "Expected to find 'Sweetener' by Ariana Grande")
+
+    @unittest.skip("Integration tests disabled by default.")
+    async def test_find_album(self):
+        results = await self.spotify_client.find_album("Sweetener")
+
+        self.assertLessEqual(1, len(results))
+        self.assertIsNotNone(results[0].popularity)
+        found_ariana_grande_album = TestSpotifyClientHelper.is_one_of_the_artists(
+            results, "Ariana Grande")
+        self.assertTrue(found_ariana_grande_album, "Expected to find 'Sweetener' by Ariana Grande")
+
+class TestSpotifyClientHelper():
+    @classmethod
+    def is_one_of_the_artists(cls, songs_or_albums, artist_name):
+        for album in songs_or_albums:
+            if artist_name in [artist.name for artist in album.artists]:
+                return True
+        return False
