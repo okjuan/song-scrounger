@@ -158,6 +158,8 @@ class TestSpotifyClient(unittest.IsolatedAsyncioTestCase):
         playlist = await self.spotify_client.create_playlist(name, spotify_uris)
 
         self.assertIsNotNone(playlist, "Playlist creation failed: received 'None' as result")
+        # TODO: verify with call to spotify
+        self.assertTrue(False, "Go check that a playlist w/ 2 songs called 'Sorry' was created w name: 'DELETE ME: test_create_playlist in song_scrounger'")
 
     @unittest.skip("Integration tests disabled by default.")
     async def test_create_empty_playlist(self):
@@ -166,6 +168,8 @@ class TestSpotifyClient(unittest.IsolatedAsyncioTestCase):
         playlist = await self.spotify_client.create_empty_playlist(name)
 
         self.assertIsNotNone(playlist, "Playlist creation failed: received 'None' as result")
+        # TODO: verify with call to spotify
+        self.assertTrue(False, "Go check that an empty playlist was created w name: 'DELETE ME: test_create_empty_playlist in song_scrounger'")
 
     @unittest.skip("Integration tests disabled by default.")
     async def test_add_tracks(self):
@@ -175,8 +179,8 @@ class TestSpotifyClient(unittest.IsolatedAsyncioTestCase):
         # Spotify Track URI for 'Redbone' by Childish Gambino
         await self.spotify_client.add_tracks(playlist_id, ["spotify:track:0wXuerDYiBnERgIpbb3JBR"])
 
-        # NOTE: must go check Spotify playlist to make sure song was added
-        # TODO: replace manual check
+        # TODO: verify with call to spotify
+        self.assertTrue(False, "Go check that 'Redbone' was added to 'Song Scrounger Test Playlist'.")
 
     @unittest.skip("Integration tests disabled by default.")
     async def test_find_track(self):
