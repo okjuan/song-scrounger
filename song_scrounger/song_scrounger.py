@@ -17,12 +17,12 @@ class SongScrounger:
 
     async def find_songs(self, input_file_path):
         text = read_file_contents(input_file_path)
-        songs = await self.find_media_items(text, self.search_song_on_spotify)
+        songs = await self.find_media_items(text, self.spotify_client.find_song)
         return songs
 
     async def find_albums(self, input_file_path):
         text = read_file_contents(input_file_path)
-        albums = await self.find_media_items(text, self.search_album_on_spotify)
+        albums = await self.find_media_items(text, self.spotify_client.find_album)
         return albums
 
     async def find_media_items(self, text, name_lookup):
@@ -102,44 +102,6 @@ class SongScrounger:
             self.is_mentioned_in_parts(artist, text) or
             self.is_partially_mentioned(artist, text)
         )
-
-    async def search_song_on_spotify(self, song_name):
-        """
-        Params:
-            song_name (str): e.g. "Sorry".
-
-        Returns:
-            (set(Song)).
-        """
-        tracks = await self.spotify_client.find_track(song_name)
-        return {
-            Song(
-                track.name,
-                track.uri,
-                [artist.name for artist in track.artists],
-                track.popularity
-            )
-            for track in tracks
-        }
-
-    async def search_album_on_spotify(self, album_name):
-        """
-        Params:
-            album_name (str): e.g. "Sorry".
-
-        Returns:
-            (set(Album)).
-        """
-        albums = await self.spotify_client.find_album(album_name)
-        return {
-            Album(
-                album.name,
-                album.uri,
-                [artist.name for artist in album.artists],
-                album.popularity
-            )
-            for album in albums
-        }
 
     def reduce_by_popularity_per_artist(self, songs_or_albums):
         return set([

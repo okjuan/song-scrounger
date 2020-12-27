@@ -9,6 +9,9 @@ mock_spotify_artist_factory = namedtuple("MockSpotifyArtist", ['name'])
 mock_spotify_track_factory = namedtuple(
     "MockSpotifyTrack", ['name', 'uri', 'artists', 'popularity'])
 
+mock_spotify_album_factory = namedtuple(
+    "MockSpotifyAlbum", ['name', 'uri', 'artists', 'popularity'])
+
 def get_path_to_test_input_file(name):
     # Relative from repo root
     return os.path.abspath(f"tests/test_inputs/{name}")

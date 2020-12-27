@@ -3,6 +3,9 @@ from spotify.http import HTTPUserClient
 from spotify import Client
 from spotify.errors import SpotifyException
 
+from .models.song import Song
+from .models.album import Album
+
 
 class SpotifyClient:
     """
@@ -13,13 +16,13 @@ class SpotifyClient:
         self.secret_key = secret_key
         self.bearer_token = bearer_token
 
-    async def find_track(self, track_name):
+    async def find_song(self, track_name):
         """Finds the given track, ignoring case.
         Params:
             track_name (str).
 
         Returns:
-            [spotify.Track]: resulting Spotify tracks.
+            (set(songscrounger.models.song.Song)): resulting Spotify tracks.
         """
         if len(track_name) == 0:
             raise ValueError("Track name cannot be empty.")
@@ -32,12 +35,17 @@ class SpotifyClient:
             print("Error occurred when searching tracks on Spotify:", e)
             raise e
 
-        return [
-            track
+        return {
+            Song(
+                track.name,
+                track.uri,
+                [artist.name for artist in track.artists],
+                track.popularity,
+            )
             for track in results.tracks
             if track.name.lower() == track_name.lower() or
                 self._strip_song_metadata(track.name).lower() == track_name.lower()
-        ]
+        }
 
     async def find_album(self, album_name):
         """Finds the given album, ignoring case.
@@ -45,7 +53,7 @@ class SpotifyClient:
             album_name (str).
 
         Returns:
-            [spotify.Album]: resulting Spotify albums.
+            [set(songscrounger.models.album.Album)]: matching Spotify albums.
         """
         if len(album_name) == 0:
             raise ValueError("Album name cannot be empty.")
@@ -59,12 +67,17 @@ class SpotifyClient:
             print("Error occurred when searching albums on Spotify:", e)
             raise e
 
-        return [
-            album
+        return {
+            Album(
+                album.name,
+                album.uri,
+                [artist.name for artist in album.artists],
+                album.popularity,
+            )
             for album in albums
             if album.name.lower() == album_name.lower() or
                 self._strip_album_metadata(album.name).lower() == album_name.lower()
-        ]
+        }
 
     def _strip_song_metadata(self, name):
         """
@@ -144,8 +157,7 @@ class SpotifyClient:
         try:
             async with Client(self.client_id, self.secret_key) as spotify_client:
                 user = spotify.User(spotify_client, data, http=http_cli)
-                for uri in spotify_uris:
-                    await user.add_tracks(playlist, uri)
+                await user.add_tracks(playlist, *[uri for uri in spotify_uris])
         except SpotifyException as e:
             print("Could not add tracks to playlist with error:", e)
             raise e
