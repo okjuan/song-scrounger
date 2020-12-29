@@ -7,10 +7,10 @@ from unittest.mock import Mock
 mock_spotify_artist_factory = namedtuple("MockSpotifyArtist", ['name'])
 
 mock_spotify_track_factory = namedtuple(
-    "MockSpotifyTrack", ['name', 'uri', 'artists', 'popularity'])
+    "MockSpotifyTrack", ['name', 'uri', 'artists', 'popularity', 'album'])
 
 mock_spotify_album_factory = namedtuple(
-    "MockSpotifyAlbum", ['name', 'uri', 'artists', 'popularity'])
+    "MockSpotifyAlbum", ['name', 'uri', 'artists', 'songs', 'popularity'])
 
 def get_path_to_test_input_file(name):
     # Relative from repo root

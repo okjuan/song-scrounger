@@ -267,7 +267,8 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
             Album(
                 "Sweetener",
                 "https://open.spotify.com/album/3tx8gQqWbGwqIGZHqDNrGe?si=FiUckKM4QIq0OlNdEQGrVw",
-                ["Ariana Grande"]
+                ["Ariana Grande"],
+                songs=[]
             )
         ]
         self.song_scrounger._get_paragraphs = MagicMock(
@@ -946,7 +947,7 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
             set([song.spotify_uri for song in results["American Pie"]]),
             set([
                 "spotify:track:1fDsrQ23eTAVFElUMaf38X",
-                "spotify:track:4wpuHehFEEpWAlkw3vjH0s"
+                "spotify:track:4wpuHehFEEpWAlkw3vjH0s",
             ])
         )
 
@@ -1125,6 +1126,19 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
         song_scrounger = SongScrounger(spotify_client)
         input_file_path = helper.get_path_to_test_input_file(input_file_name)
         return await song_scrounger.find_songs(input_file_path)
+
+    @unittest.skip("Integration tests disabled by default")
+    @patch("song_scrounger.song_scrounger.read_file_contents", return_value="\"Revolver\" by The Beatles")
+    async def test_find_albums__artists_mentioned__gets_all_songs(self, _):
+        results = await self._run_find_albums_test("mock file path")
+
+        self.assertEqual(len(results.keys()), 1)
+        self.assertIn("Revolver", results)
+        self.assertEqual(len(results["Revolver"]), 1)
+        self.assertEqual(list(results["Revolver"])[0].artists, ["The Beatles"])
+        self.assertEqual(len(list(results["Revolver"])[0].songs), 14)
+        self.assertEqual(list(results["Revolver"])[0].songs[0].name, "Taxman - Remastered 2009")
+        self.assertEqual(list(results["Revolver"])[0].songs[-1].name, "Tomorrow Never Knows - Remastered 2009")
 
     @unittest.skip("Integration tests disabled by default")
     @patch("song_scrounger.song_scrounger.read_file_contents", return_value="\"Revolver\" by Slaine")

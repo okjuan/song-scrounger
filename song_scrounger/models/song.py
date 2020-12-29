@@ -1,5 +1,5 @@
 class Song():
-    def __init__(self, name, spotify_uri, artists, popularity=None):
+    def __init__(self, name, spotify_uri, artists, popularity=None, album=None):
         """
         Params:
             name (str).
@@ -7,6 +7,7 @@ class Song():
             artists ([str]): e.g. ["Don McLean"].
             popularity (int): 0 <= popularity <= 100, as in Spotify's Web API.
                 None if unspecified.
+            album (songscrounger.models.album.Album): optional.
         """
         self.name = name
         self.spotify_uri = spotify_uri
@@ -16,3 +17,4 @@ class Song():
             self.popularity = popularity
         else:
             raise ValueError(popularity, "Must be an int in [0,100] range.")
+        self.album = album
