@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="songscrounger",
-    version="0.2.1",
+    version="0.2.3",
     author="Juan Carlos Gallegos Dupuis",
     author_email="jcgallegdup@gmail.com",
     description="A tool for finding Spotify tracks and albums from names mentioned in text.",
