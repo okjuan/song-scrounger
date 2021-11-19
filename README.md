@@ -53,6 +53,9 @@ The contents of `example_containing_albums.txt` might look like (taken from [*Th
 > Mary Lattimore: "Silver Ladders"
 > Listening to Mary Lattimore’s Silver Ladders feels like blinking awake on New Year’s Day: There’s some melancholy over what has passed mixed with buzzing wonder at what lies ahead. The harpist’s ambient compositions are somber but whimsical, submerging her careful plucks in murky pools of reverb and synth. She recorded the album with Slowdive’s Neil Halstead at his studio in the coastal English county of Cornwall, and cites the quiet minutiae of seaside life—cream tea, a pub quiz, the Sunday roast—as inspiration for the music. In turn, each twinkling note relays the bittersweet tranquility of memories gone by. –Vrinda Jagota
 
+The goal is to scrounge recommendations from websites about music, e.g.:
+- [Psychedelic Baby Mag](https://www.psychedelicbabymag.com/tag/articles)
+
 ## Creating a Spotify Developer App
 You'll need:
 * Spotify Developer app
