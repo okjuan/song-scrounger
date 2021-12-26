@@ -1115,6 +1115,19 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
             0
         )
 
+    async def test_find_songs__regression_test(self):
+        input_file_name = "regression.txt"
+
+        results = await self._run_find_songs_test(input_file_name)
+
+        self.assertEqual(1, len(results.keys()))
+        self.assertIn("Believer", results.keys())
+        self.assertEqual(len(results["Believer"]), 1)
+        self.assertEqual(
+            set([song.spotify_uri for song in results["Believer"]]),
+            set(["spotify:track:7hNOk1cGljgIB44Pisy9tw"]))
+
+
     async def _run_find_songs_test(self, input_file_name):
         from song_scrounger.spotify_client import SpotifyClient
         from song_scrounger.util import get_spotify_creds
