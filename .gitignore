@@ -1,3 +1,4 @@
 build/
 dist/
 songscrounger.egg-info/
+__pycache__
