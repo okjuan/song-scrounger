@@ -38,7 +38,13 @@ class SpotifyClient:
 
         return {
             await self._to_song(track)
-            for track in results.tracks
+            self._filter_exact_matches(results.tracks, track_name)
+        }
+
+    def _filter_exact_matches(self, tracks, track_name):
+        return {
+            track
+            for track in tracks
             if track.name.lower() == track_name.lower() or
                 self._strip_song_metadata(track.name).lower() == track_name.lower()
         }

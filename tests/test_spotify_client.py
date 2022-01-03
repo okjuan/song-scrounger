@@ -352,7 +352,7 @@ class TestSpotifyClient(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual([song.name for song in ordered_songs], expected_album_song_list)
 
-    @unittest.skip("Integration tests disabled by default.")
+    #@unittest.skip("Integration tests disabled by default.")
     async def test_create_playlist(self):
         name = f"DELETE ME: test_create_playlist in song_scrounger"
         spotify_uris = [
@@ -366,7 +366,7 @@ class TestSpotifyClient(unittest.IsolatedAsyncioTestCase):
         # TODO: verify with call to spotify
         self.assertTrue(False, "Go check that a playlist w/ 2 songs called 'Sorry' was created w name: 'DELETE ME: test_create_playlist in song_scrounger'")
 
-    @unittest.skip("Integration tests disabled by default.")
+    #@unittest.skip("Integration tests disabled by default.")
     async def test_create_empty_playlist(self):
         name = f"DELETE ME: test_create_empty_playlist in song_scrounger"
 
@@ -376,7 +376,7 @@ class TestSpotifyClient(unittest.IsolatedAsyncioTestCase):
         # TODO: verify with call to spotify
         self.assertTrue(False, "Go check that an empty playlist was created w name: 'DELETE ME: test_create_empty_playlist in song_scrounger'")
 
-    @unittest.skip("Integration tests disabled by default.")
+    #@unittest.skip("Integration tests disabled by default.")
     async def test_add_tracks(self):
         # Named 'Song Scrounger Test Playlist' on Spotify
         playlist_id = "spotify:playlist:1mWKdYnyaejjLrdK7pBg2K"
@@ -393,7 +393,7 @@ class TestSpotifyClient(unittest.IsolatedAsyncioTestCase):
         # TODO: verify with call to spotify
         self.assertTrue(False, "Go check that 'Redbone' x3 (three times) was added to 'Song Scrounger Test Playlist'.")
 
-    @unittest.skip("Integration tests disabled by default.")
+    #@unittest.skip("Integration tests disabled by default.")
     async def test_find_song(self):
         results = list(await self.spotify_client.find_song("Redbone"))
 
@@ -402,16 +402,24 @@ class TestSpotifyClient(unittest.IsolatedAsyncioTestCase):
             results, "Childish Gambino")
         self.assertTrue(found_childish_gambino_song, "Expected to find 'Redbone' by Childish Gambino")
 
-    @unittest.skip("Integration tests disabled by default.")
-    async def test_find_song__regression_test(self):
-        results = list(await self.spotify_client.find_song("American Pie"))
+    #@unittest.skip("Integration tests disabled by default.")
+    async def test_find_song__regression__no_hits(self):
+        mock_spotify_track = mock_spotify_track_factory(
+            "successful",
+            "spotify:track:5YeHLHDdQ4nKHk81XFWhCU",
+            [mock_spotify_artist_factory("Ariana Grande")],
+            popularity=99,
+            album=mock_album,
+        )
+        def allow_all(self, tracks, _):
+            return tracks
+        self.spotify_client._to_album = AsyncMock(side_effect=allow_all)
+
+        results = list(await self.spotify_client.find_song("Bottle Episode"))
 
         self.assertLessEqual(1, len(results))
-        found_catch_22_song = TestSpotifyClientHelper.is_one_of_the_artists(
-            results, "Catch 22")
-        self.assertTrue(found_catch_22_song, "Expected to find 'American Pie' by Catch 22")
 
-    @unittest.skip("Integration tests disabled by default.")
+    #@unittest.skip("Integration tests disabled by default.")
     async def test_find_album__gets_songs(self):
         results = await self.spotify_client.find_album("Sweetener")
 
@@ -423,7 +431,7 @@ class TestSpotifyClient(unittest.IsolatedAsyncioTestCase):
         ariana_grande_album = TestSpotifyClientHelper.get_by_uri(results, "spotify:album:3tx8gQqWbGwqIGZHqDNrGe")
         self.assertEqual(15, len(ariana_grande_album.songs))
 
-    @unittest.skip("Integration tests disabled by default.")
+    #@unittest.skip("Integration tests disabled by default.")
     async def test__get_album_songs(self):
         songs = await self.spotify_client._get_album_songs("Sweetener", ["Ariana Grande"], "spotify:album:3tx8gQqWbGwqIGZHqDNrGe")
 
@@ -436,7 +444,7 @@ class TestSpotifyClient(unittest.IsolatedAsyncioTestCase):
             songs, lambda song: song.album.spotify_uri == "spotify:album:3tx8gQqWbGwqIGZHqDNrGe")
         self.assertTrue(album_uri_matches, err_msg)
 
-    @unittest.skip("Integration tests disabled by default.")
+    #@unittest.skip("Integration tests disabled by default.")
     async def test__get_album_songs__by_multiple_artists(self):
         songs = await self.spotify_client._get_album_songs(
             "Yes Lawd!",
@@ -455,7 +463,7 @@ class TestSpotifyClient(unittest.IsolatedAsyncioTestCase):
             songs, lambda song: song.album.spotify_uri == "spotify:album:0K3FiXt6ekJTWaUku3LpHL")
         self.assertTrue(album_uri_matches, err_msg)
 
-    @unittest.skip("Integration tests disabled by default.")
+    #@unittest.skip("Integration tests disabled by default.")
     async def test__get_album_songs__tracks_are_in_order(self):
         expected_album_song_list = [
             "Taxman - Remastered 2009",

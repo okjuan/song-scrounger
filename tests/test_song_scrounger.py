@@ -164,6 +164,29 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(results["Sorry"]), 1)
         self.assertEqual(results["Sorry"], set([songs[0]]))
 
+    async def test_find_media_items__regression__spotify_client_returns_song(self):
+        text = "Smerz: \"Believer\""
+        self.song_scrounger._get_paragraphs = MagicMock(
+            return_value=[text]
+        )
+        songs = [
+            Song(
+                "Believer",
+                "spotify:track:7hNOk1cGljgIB44Pisy9tw",
+                ["Smerz"]
+            ),
+        ]
+        self.mock_spotify_client.find_song = AsyncMock(
+            return_value = set(songs)
+        )
+
+        results = await self.song_scrounger.find_media_items(text, self.mock_spotify_client.find_song)
+
+        self.assertEqual(len(results.keys()), 1)
+        self.assertTrue("Believer" in results.keys())
+        self.assertEqual(len(results["Believer"]), 1)
+        self.assertEqual(results["Believer"], set([songs[0]]))
+
     async def test_find_media_items__same_item_mentioned_twice__returns_only_one_copy(self):
         text = "\"Sorry\" by Justin Bieber... as I said, \"Sorry\"..."
         self.song_scrounger._get_paragraphs = MagicMock(
@@ -1126,7 +1149,6 @@ class TestSongScrounger(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             set([song.spotify_uri for song in results["Believer"]]),
             set(["spotify:track:7hNOk1cGljgIB44Pisy9tw"]))
-
 
     async def _run_find_songs_test(self, input_file_name):
         from song_scrounger.spotify_client import SpotifyClient
